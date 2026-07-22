@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import traceback
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -477,7 +478,30 @@ class AgentResearchProductService:
                 # A completed bounded search with no submitted candidate is a
                 # legitimate negative result, not missing infrastructure.
                 lifecycle = ResearchRunLifecycle.COMPLETED
-        except Exception:
+        except Exception as exc:
+            # Keep provider/data/path details out of the public failure code,
+            # while retaining enough deterministic internal evidence to resume
+            # and repair the exact failing stage.  Exception messages are
+            # intentionally excluded because they may contain local paths or
+            # transport details.
+            frames = traceback.extract_tb(exc.__traceback__)
+            self._write_artifact(
+                manifest.run_id,
+                "infrastructure_failure.json",
+                {
+                    "failure_code": ProductFailureCode.INFRASTRUCTURE_FAILED.value,
+                    "exception_type": type(exc).__name__,
+                    "frames": [
+                        {
+                            "module": Path(frame.filename).name,
+                            "function": frame.name,
+                            "line": frame.lineno,
+                        }
+                        for frame in frames[-8:]
+                    ],
+                    "stage": "REVIEW_RUN_EVIDENCE",
+                },
+            )
             failures.append(ProductFailureCode.INFRASTRUCTURE_FAILED.value)
             lifecycle = ResearchRunLifecycle.FAILED
 

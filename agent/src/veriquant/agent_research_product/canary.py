@@ -92,8 +92,10 @@ class ProductCanaryConfiguration:
     docker_image_id: str
     label_horizon_sessions: int = 20
     seed: int = 7
-    max_sessions: int = 80
-    max_symbols: int = 20
+    # ``None`` means the complete frozen vintage.  Small limits are allowed
+    # only as an explicit smoke/test budget and are recorded in the identity.
+    max_sessions: int | None = None
+    max_symbols: int | None = None
     specialist_id: str = "market_structure"
     specialist_ids: tuple[str, ...] = ()
     output_kind: str = "ScoreTable"
@@ -104,6 +106,11 @@ class ProductCanaryConfiguration:
     resume_sources: tuple[tuple[str, Path, str], ...] = ()
     vibe_tool_names: tuple[str, ...] = ()
     allow_vibe_network_tools: bool = False
+    research_mode: str = "NEW_ALPHA_EXPLORATION"
+    required_data: tuple[str, ...] = ("price_volume",)
+    experiment_type: str = "CANDIDATE_EXPLORATION"
+    expected_result_kind: str = "CANDIDATE_SET"
+    task_plan_hash: str | None = None
 
     def __post_init__(self) -> None:
         data_root = Path(self.data_root).resolve()
@@ -114,14 +121,16 @@ class ProductCanaryConfiguration:
             raise ValueError("question is required")
         if not self.docker_image.strip() or _HASH.fullmatch(self.docker_image_id) is None:
             raise ValueError("an explicit local image and immutable sha256 image id are required")
-        for name, lower, upper in (
-            ("label_horizon_sessions", 1, 252),
-            ("max_sessions", 8, 500),
-            ("max_symbols", 2, 500),
-        ):
+        for name, lower, upper in (("label_horizon_sessions", 1, 252),):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or not lower <= value <= upper:
                 raise ValueError(f"{name} must be {lower}..{upper}")
+        for name, lower in (("max_sessions", 8), ("max_symbols", 2)):
+            value = getattr(self, name)
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int) or value < lower
+            ):
+                raise ValueError(f"{name} must be None or at least {lower}")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int) or self.seed < 0:
             raise ValueError("seed must be a non-negative integer")
         if self.specialist_id not in _SPECIALISTS:
@@ -154,6 +163,12 @@ class ProductCanaryConfiguration:
             raise ValueError("vibe_tool_names must be unique and stable-sorted")
         if not set(self.vibe_tool_names).issubset(VIBE_READONLY_RESEARCH_TOOLS):
             raise ValueError("vibe_tool_names contains an unapproved research tool")
+        if not self.research_mode.strip() or not self.experiment_type.strip() or not self.expected_result_kind.strip():
+            raise ValueError("the complete research task plan is required")
+        if not self.required_data or tuple(sorted(set(self.required_data))) != self.required_data:
+            raise ValueError("required_data must be unique and stable-sorted")
+        if self.task_plan_hash is not None and _HASH.fullmatch(self.task_plan_hash) is None:
+            raise ValueError("task_plan_hash must be a canonical sha256 identity")
         object.__setattr__(self, "data_root", data_root)
         object.__setattr__(self, "artifact_root", artifact_root)
         object.__setattr__(self, "dotenv_path", Path(self.dotenv_path).resolve())
@@ -347,6 +362,9 @@ class AgentResearchProductCanary:
                 "vibe_network": config.allow_vibe_network_tools,
                 "specialists": config.specialist_ids,
                 "specialist_output_kinds": config.resolved_specialist_output_kinds,
+                "task_plan_hash": config.task_plan_hash,
+                "max_sessions": config.max_sessions,
+                "max_symbols": config.max_symbols,
             }
         )[7:23]
         manifest = ResearchRunManifest(
@@ -616,7 +634,9 @@ class _PersistedDraftWithRevisionRuntime:
         )
 
 
-def _prepare_data(frozen: Any, *, horizon: int, max_sessions: int, max_symbols: int) -> PreparedCanaryData:
+def _prepare_data(
+    frozen: Any, *, horizon: int, max_sessions: int | None, max_symbols: int | None
+) -> PreparedCanaryData:
     rows = tuple(sorted(frozen.snapshot.rows, key=lambda row: (row.event_time, row.symbol)))
     visible_fields = tuple(
         field for field in frozen.snapshot.fields
@@ -646,12 +666,16 @@ def _prepare_data(frozen: Any, *, horizon: int, max_sessions: int, max_symbols: 
         if float(row.values["volume"]) <= 0:
             continue
         eligible.append(row)
-    eligible_sessions = tuple(sorted({row.event_time for row in eligible}))[-max_sessions:]
+    all_eligible_sessions = tuple(sorted({row.event_time for row in eligible}))
+    eligible_sessions = (
+        all_eligible_sessions if max_sessions is None else all_eligible_sessions[-max_sessions:]
+    )
     if len(eligible_sessions) < 8:
         raise ValueError("frozen repository has too few labelled PIT sessions")
     prediction_count = max(2, min(10, len(eligible_sessions) // 4))
     prediction_sessions = set(eligible_sessions[-prediction_count:])
-    symbols = tuple(sorted({row.symbol for row in eligible if row.event_time in prediction_sessions}))[:max_symbols]
+    all_symbols = tuple(sorted({row.symbol for row in eligible if row.event_time in prediction_sessions}))
+    symbols = all_symbols if max_symbols is None else all_symbols[:max_symbols]
     prediction = tuple(
         row for row in eligible if row.event_time in prediction_sessions and row.symbol in symbols
     )
@@ -794,6 +818,9 @@ def _task_question(
     )
     return (
         f"{config.question}\n"
+        f"研究模式：{config.research_mode}；实验类型：{config.experiment_type}；"
+        f"预期交付：{config.expected_result_kind}；任务计划身份：{config.task_plan_hash or '未单独登记'}。"
+        f"必需数据语义：{','.join(config.required_data)}。"
         f"你的专业研究组是 {specialist_id or config.specialist_id}。先从本组角度规划多个可证伪实验。"
         "提交一个 DRAFT 研究程序，使用 TRAIN_PREDICT_V2 三参数入口。"
         f"{output_rule}"

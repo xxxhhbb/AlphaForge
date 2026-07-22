@@ -70,6 +70,39 @@ def test_terminal_preserves_lead_but_stably_sorts_multi_specialist_identity(tmp_
     assert payload["selected_specialists"] == list(configuration.specialist_ids)
 
 
+def test_explicit_specialist_subset_filters_planner_output_contracts(tmp_path, monkeypatch):
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    (data_root / "frozen_validation_data.json").write_text("{}", encoding="utf-8")
+    report_path = tmp_path / "report.md"
+    report_path.write_text("# report\n", encoding="utf-8")
+    captured = {}
+
+    class Result:
+        lifecycle = "COMPLETED"
+        def __init__(self):
+            self.report_path = str(report_path)
+        def to_dict(self):
+            return {"lifecycle": "COMPLETED", "experiments": [], "report_path": self.report_path}
+
+    class FakeCanary:
+        def __init__(self, configuration):
+            captured["configuration"] = configuration
+        def run(self):
+            return Result()
+
+    monkeypatch.setattr(terminal, "_runtime_identity", lambda _path: ("image", "sha256:" + "a" * 64))
+    monkeypatch.setattr("veriquant.agent_research_product.canary.AgentResearchProductCanary", FakeCanary)
+    args = terminal._parser().parse_args([
+        "--question", QUESTION, "--data-root", str(data_root), "--root", str(tmp_path / "runs"),
+        "--specialist", "fundamental", "--specialist", "macro_regime", "--specialist", "market_structure",
+    ])
+    terminal.run(args)
+    config = captured["configuration"]
+    assert {name for name, _kind in config.specialist_output_kinds} == set(config.specialist_ids)
+    assert "meta_alpha" not in dict(config.specialist_output_kinds)
+
+
 def test_reuse_existing_recovers_every_specialist_content_addressed_source(tmp_path):
     identity_root = tmp_path / "identity"
     experiments = []

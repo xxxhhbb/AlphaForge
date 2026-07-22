@@ -55,7 +55,11 @@ _LABEL_TOKENS = frozenset(
     {"label", "labels", "future_return", "forward_return", "target_return", "sealed", "test_metric", "test_metrics"}
 )
 _PATH_PATTERN = re.compile(
-    r"(?i)(?:^[a-z]:[\\/]|^\\\\|(?:^|[\\/])\.\.(?:[\\/]|$)|file://|~[\\/]|\\\\\.\\|:[^\\/:]+$)"
+    # A colon by itself is common in statistical term names
+    # (``signal:regime``) and is not a filesystem capability. NTFS alternate
+    # streams require an actual path component before the stream suffix.
+    r"(?i)(?:^[a-z]:[\\/]|^\\\\|(?:^|[\\/])\.\.(?:[\\/]|$)|file://|~[\\/]|\\\\\.\\|"
+    r"(?:^[a-z]:[\\/][^\r\n]*|[\\/][^\r\n]*)[:][^\\/:]+$)"
 )
 
 

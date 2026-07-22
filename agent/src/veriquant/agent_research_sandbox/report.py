@@ -410,10 +410,16 @@ class ChineseResearchReportComposer:
             points.append(f"最值得继续跟踪的变量是：{leaders}。它们在本次样本中出现了较明确的统计关系。")
         else:
             points.append("本轮没有发现足够稳定的正向线索，但已经完成了可复核的负向研究。")
-        points.append(
-            "本轮真正完成的是多变量关系检验；尚未完成完整因子回测、成本后收益、"
-            "与 50 日动量的直接相关性以及高低 Shibor 分组比较。"
-        )
+        completed_contracts = sorted({
+            self._split_metric(item.name)[0] for item in report.metrics
+        })
+        if completed_contracts:
+            points.append(
+                f"本轮已形成 {len(completed_contracts)} 组独立机器结果；"
+                "具体完成项、未完成项和适用边界以本报告的覆盖表为准。"
+            )
+        else:
+            points.append("本轮保留了研究计划、调查和失败诊断，但没有可用于机器判断的标准结果表。")
         points.append(
             "因此目前最合理的动作是保留候选方向并进入下一轮验证，而不是直接用于选股或交易。"
         )
@@ -531,25 +537,32 @@ class ChineseResearchReportComposer:
         }.get(term, f"该变量在本次样本中呈{direction}关系，需要样本外复核。")
 
     def _usage_guidance(self, report: CustomerResearchReport) -> list[str]:
-        return [
-            "- **可以使用的部分**：把跨研究路线重复出现的变量作为下一轮候选方向。",
-            "- **暂时不能使用的部分**：不能把当前回归系数直接解释为预期收益，也不能据此生成持仓。",
-            "- **最重要的风险**：换手率本身可能意味着更高交易成本；ROE 与 ROA 的结论不完全一致；"
-            "当前动量控制变量缺少有效变化。",
-            "- **当前证据等级**：机器已经复核统计结果，但完整交易检验和独立晋级评审尚未完成。",
+        lines = [
+            "- **可以使用的部分**：将机器结果支持、且在不同研究路线中方向一致的发现用于下一轮研究决策。",
+            "- **暂时不能使用的部分**：统计系数、相关性或事件效应不能直接解释为预期收益，也不能据此生成持仓。",
+            "- **当前证据等级**：以报告开头的机器结论为准；未列入机器指标的模型解释不构成证据。",
         ]
+        if report.limitations:
+            lines.append("- **最重要的风险**：" + "；".join(report.limitations[:3]))
+        else:
+            lines.append("- **最重要的风险**：仍需关注样本外稳定性、交易成本、容量和已知风险暴露。")
+        return lines
 
     def _specific_next_steps(self, report: CustomerResearchReport) -> tuple[str, ...]:
-        steps = [
-            "把本轮较一致的变量组合成明确的每日股票评分，并进行滚动样本外评价。",
-            "计算 RankIC、ICIR、分位数组合收益、换手、价差和冲击成本，确认统计关系能否转化为成本后收益。",
-        ]
+        steps = []
+        if report.metrics:
+            steps.extend([
+                "围绕本轮最一致的机器发现执行独立重放，并保留原假设、样本和成本口径。",
+                "根据当前问题对应的输出合同补充样本外、成本、稳定性或反证检验。",
+            ])
+        else:
+            steps.append("先解决覆盖表列出的首个数据或能力缺口，再按原问题重跑，不更换研究目标。")
         question = report.question.casefold()
         if any(token in question for token in ("低相关", "增量", "现有", "正交")):
             steps.append("直接计算候选与 50 日动量的相关系数和残差增量，不再使用零变化代理。")
         if any(token in question for token in ("shibor", "状态", "高低", "环境")):
             steps.append("按决策时可知的 Shibor 划分高低状态，分别报告样本数、收益、IC 和成本。")
-        steps.append("在更长时间和更大历史股票池上重放，检查结论是否只由少量股票或单一时期造成。")
+        steps.append("在完整冻结历史和实际历史股票池上重放，检查结论是否只由少量股票或单一时期造成。")
         return tuple(steps)
 
     def _plain_data_summary(self, report: CustomerResearchReport) -> tuple[str, ...]:

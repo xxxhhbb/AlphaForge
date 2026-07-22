@@ -208,6 +208,18 @@ def test_mechanical_gate_rejects_privileged_surfaces(source: str, expected: Revi
     assert decision.may_submit_once_more is True
 
 
+def test_statistical_interaction_term_is_not_misclassified_as_ntfs_stream() -> None:
+    source = "def run_research(rows):\n    return {'term': 'signal:shibor_high', 'rows': []}\n"
+    decision = ExperimentReviewGate().review(request(source))
+    assert ReviewFailureCode.PATH_ACCESS_FORBIDDEN not in {item.code for item in decision.findings}
+
+
+def test_ntfs_alternate_stream_path_remains_forbidden() -> None:
+    source = "value = 'C:\\\\Users\\\\secret.txt:hidden'"
+    decision = ExperimentReviewGate().review(request(source))
+    assert ReviewFailureCode.PATH_ACCESS_FORBIDDEN in {item.code for item in decision.findings}
+
+
 def test_reviewer_suggestion_cannot_override_mechanical_rejection() -> None:
     decision = ExperimentReviewGate().review(
         request("score = eval('1+1')"),

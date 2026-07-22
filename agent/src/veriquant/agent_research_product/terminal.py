@@ -39,6 +39,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
     parser.add_argument("--dotenv", type=Path, default=REPO_ROOT / "agent" / ".env")
     parser.add_argument("--label-horizon", type=int, default=20)
+    parser.add_argument("--max-sessions", type=int, help="显式 smoke/资源预算；默认使用完整冻结历史")
+    parser.add_argument("--max-symbols", type=int, help="显式 smoke/资源预算；默认使用完整冻结股票池")
+    parser.add_argument(
+        "--smoke", action="store_true",
+        help="显式使用 80 个交易日、20 只股票；正式研究不要使用",
+    )
     parser.add_argument("--specialist", action="append", choices=SPECIALISTS)
     parser.add_argument("--allow-dynamic-tools", action="store_true")
     parser.add_argument(
@@ -83,12 +89,21 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
 
     image, image_id = _runtime_identity(DEFAULT_RUNTIME_RECEIPT)
     task_plan = ResearchTaskPlanner(catalog_path=DEFAULT_CATALOG).compile(args.question)
+    if args.smoke and (args.max_sessions is not None or args.max_symbols is not None):
+        raise ValueError("--smoke 不能与显式规模预算同时使用")
+    max_sessions = 80 if args.smoke else args.max_sessions
+    max_symbols = 20 if args.smoke else args.max_symbols
     requested_specialists = tuple(dict.fromkeys(args.specialist or task_plan.selected_specialists))
     # The task plan keeps lead-first business priority, while the execution
     # contract requires a stable-sorted identity for deterministic hashes.
     # Preserve both meanings instead of treating planner order as identity.
     lead_specialist = requested_specialists[0] if args.specialist else task_plan.lead_specialist
     specialists = tuple(sorted(requested_specialists))
+    planned_output_kinds = dict(task_plan.specialist_output_kinds)
+    specialist_output_kinds = tuple(
+        (specialist, planned_output_kinds.get(specialist, task_plan.output_kind))
+        for specialist in specialists
+    )
     requested_vibe_tools = tuple(sorted(set(
         args.vibe_tool or (VIBE_READONLY_RESEARCH_TOOLS if args.allow_dynamic_tools else ())
     )))
@@ -99,7 +114,7 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
             "question": args.question,
             "seed": args.seed,
             "specialists": specialists,
-            "specialist_output_kinds": task_plan.specialist_output_kinds,
+            "specialist_output_kinds": specialist_output_kinds,
         },
         ensure_ascii=False, sort_keys=True, separators=(",", ":"),
     ).encode("utf-8")
@@ -119,15 +134,22 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
         docker_image=image,
         docker_image_id=image_id,
         label_horizon_sessions=args.label_horizon,
+        max_sessions=max_sessions,
+        max_symbols=max_symbols,
         seed=args.seed,
         specialist_id=lead_specialist,
         specialist_ids=specialists,
-        specialist_output_kinds=task_plan.specialist_output_kinds,
+        specialist_output_kinds=specialist_output_kinds,
         resume_sources=resume_sources,
         output_kind=task_plan.output_kind,
         dotenv_path=Path(args.dotenv),
         vibe_tool_names=requested_vibe_tools,
         allow_vibe_network_tools=bool(requested_vibe_tools),
+        research_mode=task_plan.mode,
+        required_data=task_plan.required_data,
+        experiment_type=task_plan.experiment_type,
+        expected_result_kind=task_plan.expected_result_kind,
+        task_plan_hash=task_plan.artifact_hash,
     )
     result = _run_with_progress(
         AgentResearchProductCanary(configuration),
@@ -142,6 +164,11 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
     payload["runtime"] = "VIBE_AGENT_LOOP_AGENT_RESEARCH_PRODUCT_V1"
     payload["dynamic_research_tools"] = list(requested_vibe_tools)
     payload["research_task_plan"] = task_plan.to_dict()
+    payload["data_budget"] = {
+        "mode": "EXPLICIT_SMOKE" if args.smoke else ("EXPLICIT_LIMIT" if max_sessions or max_symbols else "FULL_FROZEN_VINTAGE"),
+        "max_sessions": max_sessions,
+        "max_symbols": max_symbols,
+    }
     payload["recovered_from_existing_drafts"] = bool(resume_sources)
     return (0 if result.lifecycle in {"COMPLETED", "PARTIAL"} else 2), payload, report
 
@@ -188,6 +215,29 @@ def _recoverable_sources(
         candidate = (rank.get(str(item.get("status")), -1), index, str(item["source_hash"]))
         if specialist_id not in selected or candidate[:2] > selected[specialist_id][:2]:
             selected[specialist_id] = candidate
+    # A platform failure may happen after the AgentLoop atomically committed
+    # its CODE draft but before an experiment receipt was created.  Recovery
+    # must reuse that committed draft instead of paying for another provider
+    # run.  The outcome is DRAFT-only and the recovered source still passes
+    # the full review/Docker/Evidence path below.
+    for outcome_path in sorted(identity_root.glob("**/branches/task_*/outcome.json")):
+        outcome_value = json.loads(outcome_path.read_text(encoding="utf-8"))
+        payload = outcome_value.get("payload") if isinstance(outcome_value, dict) else None
+        if not isinstance(payload, dict) or payload.get("status") != "COMPLETED":
+            continue
+        specialist_id = str(payload.get("specialist_id") or "")
+        if specialist_id in selected:
+            continue
+        artifacts = payload.get("draft_artifacts")
+        if not isinstance(artifacts, list):
+            continue
+        code_hashes = [
+            str(item.get("content_hash"))
+            for item in artifacts
+            if isinstance(item, dict) and item.get("kind") == "CODE"
+        ]
+        if code_hashes and code_hashes[-1].startswith("sha256:"):
+            selected[specialist_id] = (0, 0, code_hashes[-1])
     recovered = []
     for specialist_id in specialists:
         source_hash = selected.get(specialist_id, (-1, -1, ""))[2]
