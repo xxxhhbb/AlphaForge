@@ -622,6 +622,68 @@
 
 .report-gap { height: 8px; }
 
+.plan-review-card {
+  margin-top: 18px;
+}
+
+.plan-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.plan-review-grid article,
+.plan-review-lists > div {
+  border: 1px solid var(--af-line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.72);
+  padding: 14px;
+}
+
+.plan-review-grid span,
+.plan-review-lists h3 {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--af-muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.plan-review-grid p,
+.plan-review-grid small {
+  margin: 0;
+  color: var(--af-ink);
+  line-height: 1.58;
+}
+
+.plan-review-grid small {
+  display: block;
+  margin-top: 8px;
+  color: var(--af-muted);
+}
+
+.plan-review-lists {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.plan-review-lists ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #334047;
+  line-height: 1.6;
+}
+
+.plan-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 .spin {
   animation: af-spin 1s linear infinite;
 }
@@ -636,6 +698,8 @@
   .question-actions,
   .specialist-board,
   .report-fact-grid,
+  .plan-review-grid,
+  .plan-review-lists,
   .candidate-summary-list > div {
     grid-template-columns: 1fr;
   }

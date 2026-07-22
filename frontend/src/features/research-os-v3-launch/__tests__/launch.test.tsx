@@ -81,7 +81,7 @@ function renderPage(mockClient: V3LaunchClient, props: Record<string, unknown> =
 describe("AlphaForge 单入口研究终端", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("用户点击一次即可自动完成计划、确认、启动、轮询并展示报告", async () => {
+  it("生成计划后停在审阅状态，用户显式确认后才启动并展示报告", async () => {
     const user = userEvent.setup();
     const createPlan = vi.fn(async () => draft);
     const confirmPlan = vi.fn(async () => confirmed);
@@ -91,9 +91,15 @@ describe("AlphaForge 单入口研究终端", () => {
     const onResultReady = vi.fn();
 
     renderPage(client({ createPlan, confirmPlan, startRun, getRun, getReportMarkdown }), { onResultReady });
-    await user.click(screen.getByRole("button", { name: /开始研究并生成报告/ }));
+    await user.click(screen.getByRole("button", { name: /生成研究计划/ }));
 
     await waitFor(() => expect(createPlan).toHaveBeenCalled());
+    expect(confirmPlan).not.toHaveBeenCalled();
+    expect(startRun).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "研究计划审阅" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /确认并开始研究/ }));
+
     await waitFor(() => expect(confirmPlan).toHaveBeenCalledWith("campaign_v3_test"));
     await waitFor(() => expect(startRun).toHaveBeenCalledWith("campaign_v3_test"));
     await waitFor(() => expect(getReportMarkdown).toHaveBeenCalledWith("run_v3_test", expect.any(AbortSignal)));
@@ -111,7 +117,8 @@ describe("AlphaForge 单入口研究终端", () => {
     const getReportMarkdown = vi.fn(async () => "# 报告\n\n## 一页结论\n\n机器评价已经完成。");
 
     renderPage(client({ getRun, getReportMarkdown }));
-    await user.click(screen.getByRole("button", { name: /开始研究并生成报告/ }));
+    await user.click(screen.getByRole("button", { name: /生成研究计划/ }));
+    await user.click(await screen.findByRole("button", { name: /确认并开始研究/ }));
 
     await waitFor(() => expect(getRun).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("机器评价已经完成。")).toBeInTheDocument();
@@ -123,9 +130,9 @@ describe("AlphaForge 单入口研究终端", () => {
     const startRun = vi.fn(async () => runView());
     renderPage(client({ createPlan: async () => unavailable, startRun }));
 
-    await user.click(screen.getByRole("button", { name: /开始研究并生成报告/ }));
+    await user.click(screen.getByRole("button", { name: /生成研究计划/ }));
 
-    expect(await screen.findByText(/缺少财务公告时间语义/)).toBeInTheDocument();
+    expect(await screen.findAllByText(/缺少财务公告时间语义/)).toHaveLength(2);
     expect(startRun).not.toHaveBeenCalled();
   });
 
