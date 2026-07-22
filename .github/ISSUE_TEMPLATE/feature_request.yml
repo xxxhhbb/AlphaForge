@@ -1,0 +1,85 @@
+name: AlphaForge Feature Request
+description: Propose a scoped product or research capability with acceptance criteria
+title: "[Feature] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User or research problem
+      description: What decision cannot be made today, and for whom?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_outcome
+    attributes:
+      label: Proposed outcome
+      description: Describe observable behavior, not only components.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Frontend research flow
+        - Formal report / presentation
+        - Specialist research method
+        - Data / PIT readiness
+        - Standard output / evaluator
+        - Evidence / Promotion
+        - Runtime / resume / audit
+        - Docker / deployment
+        - Documentation / collaboration
+        - Upstream Vibe compatibility
+    validations:
+      required: true
+
+  - type: textarea
+    id: contract
+    attributes:
+      label: Inputs, outputs, state, and failure behavior
+      placeholder: |
+        Input:
+        Output:
+        Persisted state:
+        Failure/data-gap behavior:
+    validations:
+      required: true
+
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority and security impact
+      description: Explain whether this touches tools, network, generated code, Evidence, sealed, Promotion, Risk, orders, ledger, or secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Positive case
+        - [ ] Negative/data-gap case
+        - [ ] Replay or resume
+        - [ ] Security boundary
+        - [ ] User-facing documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to submit a scoped PR.

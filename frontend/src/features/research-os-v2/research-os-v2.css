@@ -1,0 +1,189 @@
+.ros2-shell {
+  --ros2-ink: #243039;
+  --ros2-muted: #66727a;
+  --ros2-line: rgba(48, 65, 76, 0.12);
+  --ros2-glass: rgba(255, 255, 255, 0.48);
+  --ros2-glass-strong: rgba(255, 255, 255, 0.64);
+  --ros2-blue: #5e7887;
+  --ros2-sage: #6e8177;
+  --ros2-warm: #887866;
+  --ros2-danger: #8b5e5a;
+  min-height: 100vh;
+  color: var(--ros2-ink);
+  background:
+    radial-gradient(circle at 8% 5%, rgba(129, 155, 168, 0.10), transparent 26rem),
+    radial-gradient(circle at 91% 25%, rgba(142, 157, 144, 0.09), transparent 28rem),
+    #f4f5f4;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.ros2-wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+.ros2-hero { padding: 72px 0 34px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 44px; align-items: end; }
+.ros2-kicker, .ros2-panel-heading p, .ros2-run-heading p { margin: 0 0 8px; color: var(--ros2-blue); font-size: 11px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+.ros2-hero h1 { max-width: 780px; margin: 0; font-size: clamp(36px, 5.2vw, 66px); line-height: 1.05; letter-spacing: -.045em; font-weight: 680; }
+.ros2-hero p:not(.ros2-kicker) { max-width: 720px; margin: 20px 0 0; color: var(--ros2-muted); font-size: 15px; line-height: 1.75; }
+.ros2-boundary { padding: 20px; border: 1px solid rgba(255,255,255,.7); border-radius: 24px; background: rgba(255,255,255,.40); backdrop-filter: blur(22px); box-shadow: 0 20px 60px rgba(43,55,62,.05); }
+.ros2-boundary svg { width: 22px; color: var(--ros2-sage); }
+.ros2-boundary strong { display: block; margin-top: 12px; }
+.ros2-boundary p { margin-top: 7px !important; font-size: 12px !important; line-height: 1.6 !important; }
+
+.ros2-question { padding: 26px; border: 1px solid rgba(255,255,255,.72); border-radius: 28px; background: var(--ros2-glass); backdrop-filter: blur(24px); box-shadow: 0 24px 70px rgba(37,49,57,.055); }
+.ros2-question label { display: block; font-size: 12px; font-weight: 720; }
+.ros2-question textarea { width: 100%; min-height: 118px; margin-top: 11px; padding: 18px; resize: vertical; border: 1px solid var(--ros2-line); border-radius: 20px; outline: none; color: inherit; background: rgba(255,255,255,.46); font: inherit; font-size: 17px; line-height: 1.6; box-sizing: border-box; }
+.ros2-question textarea:focus { border-color: rgba(94,120,135,.45); box-shadow: 0 0 0 4px rgba(94,120,135,.06); }
+.ros2-options { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; }
+.ros2-options label { color: var(--ros2-muted); font-size: 11px; }
+.ros2-options select { width: 100%; margin-top: 6px; padding: 11px 13px; border: 1px solid var(--ros2-line); border-radius: 14px; background: rgba(255,255,255,.55); color: var(--ros2-ink); }
+.ros2-primary { min-height: 43px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 14px; color: white; background: #526a77; font-weight: 750; cursor: pointer; }
+.ros2-primary:hover { background: #485f6b; }
+.ros2-primary:disabled { opacity: .46; cursor: not-allowed; }
+.ros2-primary svg { width: 16px; }
+.ros2-error { margin: 16px 0 0; padding: 12px 14px; border-radius: 14px; background: rgba(139,94,90,.09); color: var(--ros2-danger); }
+.ros2-polling { margin: 16px 0 0; padding: 11px 14px; border: 1px solid var(--ros2-line); border-radius: 14px; background: rgba(255,255,255,.38); color: var(--ros2-muted); font-size: 11px; }
+
+.ros2-content { padding-bottom: 72px; }
+.ros2-panel, .ros2-run { margin-top: 22px; padding: 26px; border: 1px solid rgba(255,255,255,.72); border-radius: 28px; background: var(--ros2-glass); backdrop-filter: blur(24px); box-shadow: 0 18px 55px rgba(37,49,57,.045); }
+.ros2-panel-heading, .ros2-run-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.ros2-heading-meta { display: flex; align-items: center; gap: 8px; }
+.ros2-panel-heading h2, .ros2-run-heading h2 { margin: 0; font-size: 25px; letter-spacing: -.025em; }
+.ros2-lead { max-width: 840px; color: var(--ros2-muted); line-height: 1.7; }
+.ros2-provider { padding: 9px 11px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--ros2-line); border-radius: 15px; background: rgba(255,255,255,.46); }
+.ros2-provider svg { width: 16px; color: var(--ros2-blue); }
+.ros2-provider span { display: grid; gap: 2px; }
+.ros2-provider strong { font-size: 11px; }
+.ros2-provider small { max-width: 250px; color: var(--ros2-muted); font-size: 9px; }
+.ros2-provider-确定性回退 svg { color: var(--ros2-warm); }
+.ros2-provider-不可用 svg { color: var(--ros2-danger); }
+.ros2-two-column { margin-top: 24px; display: grid; grid-template-columns: 1fr 1.15fr; gap: 18px; }
+.ros2-two-column > article { padding: 19px; border: 1px solid var(--ros2-line); border-radius: 21px; background: rgba(255,255,255,.30); }
+.ros2-two-column h3 { margin: 0 0 12px; display: flex; gap: 7px; align-items: center; font-size: 14px; }
+.ros2-two-column h3:not(:first-child) { margin-top: 20px; }
+.ros2-two-column h3 svg { width: 17px; color: var(--ros2-blue); }
+.ros2-two-column ol { margin: 0; padding-left: 20px; color: var(--ros2-muted); font-size: 12px; line-height: 1.75; }
+.ros2-coverage-list { margin: 0; padding: 0; display: grid; gap: 8px; list-style: none; }
+.ros2-coverage { padding: 10px; display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: start; border-radius: 14px; background: rgba(255,255,255,.38); }
+.ros2-coverage > svg { width: 15px; color: var(--ros2-sage); }
+.ros2-coverage span { display: grid; gap: 2px; }
+.ros2-coverage strong { font-size: 11px; }
+.ros2-coverage small, .ros2-coverage em { color: var(--ros2-muted); font-size: 9px; font-style: normal; }
+.ros2-coverage b { color: var(--ros2-sage); font-size: 10px; }
+.ros2-coverage-部分可用 b { color: var(--ros2-warm); }
+.ros2-coverage-不可用 b { color: var(--ros2-danger); }
+.ros2-data-plan { margin-top: 18px; padding: 19px; border: 1px solid var(--ros2-line); border-radius: 22px; background: rgba(255,255,255,.30); }
+.ros2-data-plan > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ros2-data-plan > header p { margin: 0 0 6px; color: var(--ros2-blue); font-size: 9px; font-weight: 760; letter-spacing: .1em; }
+.ros2-data-plan h3 { margin: 0; display: flex; align-items: center; gap: 7px; font-size: 15px; }
+.ros2-data-plan h3 svg { width: 17px; color: var(--ros2-blue); }
+.ros2-data-plan > header > span { padding: 6px 9px; border-radius: 999px; color: var(--ros2-sage); background: rgba(110,129,119,.10); font-size: 10px; font-weight: 740; }
+.ros2-data-plan > header > span[data-readiness="PARTIAL"] { color: var(--ros2-warm); background: rgba(136,120,102,.10); }
+.ros2-data-plan > header > span[data-readiness="UNAVAILABLE"] { color: var(--ros2-danger); background: rgba(139,94,90,.08); }
+.ros2-data-plan-summary { margin: 16px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ros2-data-plan-summary > div { padding: 12px; border-radius: 15px; background: rgba(255,255,255,.38); }
+.ros2-data-plan-summary dt { color: var(--ros2-muted); font-size: 9px; }
+.ros2-data-plan-summary dd { margin: 5px 0 0; font-size: 11px; font-weight: 720; }
+.ros2-data-plan-summary small { display: block; margin-top: 4px; color: var(--ros2-muted); font-size: 8px; line-height: 1.5; }
+.ros2-data-plan-details { margin-top: 9px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.ros2-data-plan-details > div { padding: 12px; border: 1px solid rgba(48,65,76,.08); border-radius: 15px; }
+.ros2-data-plan-details strong { font-size: 10px; }
+.ros2-data-plan-details p { margin: 6px 0 0; color: var(--ros2-muted); font-family: "JetBrains Mono", monospace; font-size: 8px; line-height: 1.65; overflow-wrap: anywhere; }
+.ros2-data-plan-note { margin-top: 9px; padding: 11px 12px; display: flex; gap: 8px; border-radius: 15px; background: rgba(110,129,119,.07); }
+.ros2-data-plan-note.is-gap { background: rgba(136,120,102,.07); }
+.ros2-data-plan-note > svg { width: 16px; flex: 0 0 auto; color: var(--ros2-sage); }
+.ros2-data-plan-note.is-gap > svg { color: var(--ros2-warm); }
+.ros2-data-plan-note strong { font-size: 10px; }
+.ros2-data-plan-note p { margin: 4px 0 0; color: var(--ros2-muted); font-size: 9px; line-height: 1.55; }
+.ros2-data-plan-hash { display: block; margin-top: 10px; color: var(--ros2-muted); font-size: 8px; overflow-wrap: anywhere; }
+.ros2-warning { margin-top: 16px; padding: 14px; display: flex; gap: 10px; border: 1px solid rgba(136,120,102,.15); border-radius: 17px; background: rgba(238,233,225,.46); }
+.ros2-warning svg { width: 18px; color: var(--ros2-warm); }
+.ros2-warning p { margin: 4px 0 0; color: var(--ros2-muted); font-size: 11px; }
+.ros2-panel-actions { margin-top: 22px; padding-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--ros2-line); }
+.ros2-panel-actions p { margin: 0; display: flex; align-items: center; gap: 7px; color: var(--ros2-muted); font-size: 11px; }
+.ros2-panel-actions p svg { width: 16px; color: var(--ros2-sage); }
+.ros2-state { padding: 6px 10px; border-radius: 999px; background: rgba(110,129,119,.12); color: var(--ros2-sage); font-size: 11px; font-weight: 750; }
+.ros2-contract-grid { margin: 22px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.ros2-contract-grid > div { padding: 13px; border-radius: 16px; background: rgba(255,255,255,.34); }
+.ros2-contract-grid dt { color: var(--ros2-muted); font-size: 9px; }
+.ros2-contract-grid dd { margin: 5px 0 0; font-size: 11px; font-weight: 700; }
+.ros2-plan-lists { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.ros2-plan-lists > div { padding: 14px; border: 1px solid var(--ros2-line); border-radius: 17px; }
+.ros2-plan-lists ul { margin: 8px 0 0; padding-left: 17px; color: var(--ros2-muted); font-size: 10px; line-height: 1.7; }
+.ros2-plan-lists p, .ros2-plan-lists code { display: block; color: var(--ros2-muted); font-size: 10px; overflow-wrap: anywhere; }
+
+.ros2-run-heading code { color: var(--ros2-muted); font-size: 10px; }
+.ros2-summary { margin-top: 22px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.ros2-summary article { padding: 16px; border-radius: 19px; background: rgba(255,255,255,.42); }
+.ros2-summary span { display: block; color: var(--ros2-muted); font-size: 9px; }
+.ros2-summary strong { display: block; margin-top: 5px; font-size: 22px; }
+.ros2-checkpoint { margin-top: 12px; padding: 15px 17px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-radius: 18px; background: rgba(233,230,224,.52); }
+.ros2-checkpoint svg { width: 18px; color: var(--ros2-warm); }
+.ros2-checkpoint div { display: grid; gap: 2px; }
+.ros2-checkpoint small { color: var(--ros2-muted); }
+.ros2-checkpoint span { color: var(--ros2-warm); font-size: 10px; font-weight: 750; }
+.ros2-group-list { margin-top: 16px; display: grid; gap: 14px; }
+.ros2-group { padding: 19px; border: 1px solid var(--ros2-line); border-radius: 22px; background: rgba(255,255,255,.34); }
+.ros2-group.is-problem { background: rgba(249,246,244,.38); }
+.ros2-group > header { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; }
+.ros2-group > header > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: rgba(110,129,119,.09); color: var(--ros2-sage); }
+.ros2-group.is-problem > header > span { color: var(--ros2-danger); background: rgba(139,94,90,.07); }
+.ros2-group > header svg { width: 17px; }
+.ros2-group h3 { margin: 0; font-size: 15px; }
+.ros2-group header p { margin: 4px 0 0; color: var(--ros2-muted); font-size: 10px; }
+.ros2-group header b { color: var(--ros2-blue); font-size: 10px; }
+.ros2-budget { margin-top: 12px; display: flex; justify-content: space-between; color: var(--ros2-muted); font-size: 9px; }
+.ros2-progress { margin: 10px 0 0; padding: 0; display: flex; gap: 12px; flex-wrap: wrap; list-style: none; color: var(--ros2-muted); font-size: 9px; }
+.ros2-progress li { display: flex; gap: 4px; align-items: center; }
+.ros2-progress svg { width: 10px; }
+.ros2-branch-failure { margin: 12px 0 0; padding: 10px; border-radius: 12px; background: rgba(139,94,90,.07); color: var(--ros2-danger); font-size: 10px; }
+.ros2-candidate-list { margin-top: 13px; display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+.ros2-candidate { padding: 15px; border: 1px solid var(--ros2-line); border-radius: 17px; background: rgba(255,255,255,.44); }
+.ros2-candidate > header { display: flex; justify-content: space-between; gap: 12px; }
+.ros2-candidate h4 { margin: 3px 0 0; }
+.ros2-candidate header small { color: var(--ros2-muted); font-size: 8px; }
+.ros2-candidate header span { align-self: start; padding: 5px 7px; border-radius: 999px; color: var(--ros2-blue); background: rgba(94,120,135,.10); font-size: 9px; font-weight: 750; }
+.ros2-candidate header span[data-decision="拒绝"], .ros2-candidate header span[data-decision="需修订"] { color: var(--ros2-danger); background: rgba(139,94,90,.08); }
+.ros2-candidate > p { color: var(--ros2-muted); font-size: 10px; line-height: 1.55; }
+.ros2-candidate > code { display: block; padding: 8px; border-radius: 10px; background: rgba(94,120,135,.06); color: #5f727c; font-size: 9px; overflow-wrap: anywhere; }
+.ros2-decision { margin-top: 11px; display: flex; gap: 7px; }
+.ros2-decision svg { width: 15px; color: var(--ros2-sage); }
+.ros2-decision span { display: grid; gap: 3px; }
+.ros2-decision strong { font-size: 10px; }
+.ros2-decision small { color: var(--ros2-muted); font-size: 9px; }
+.ros2-metrics { margin: 10px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+.ros2-metrics div { padding: 6px; border-left: 1px solid var(--ros2-line); }
+.ros2-metrics dt { color: var(--ros2-muted); font-size: 7px; }
+.ros2-metrics dd { margin: 3px 0 0; font-size: 11px; font-weight: 750; }
+.ros2-hash { display: block; margin-top: 8px; color: var(--ros2-muted); font-size: 8px; overflow-wrap: anywhere; }
+.ros2-sealed { margin-top: 15px; padding: 14px; display: flex; gap: 9px; border: 1px solid rgba(136,120,102,.13); border-radius: 17px; background: rgba(238,233,225,.42); }
+.ros2-sealed svg { width: 18px; color: var(--ros2-warm); }
+.ros2-sealed p { margin: 4px 0 0; color: var(--ros2-muted); font-size: 10px; }
+.ros2-meaning { margin-top: 14px; padding: 16px; border-radius: 18px; background: rgba(255,255,255,.30); }
+.ros2-meaning h3 { margin: 0 0 10px; font-size: 13px; }
+.ros2-meaning dl { margin: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.ros2-meaning dl > div { padding: 9px; border-left: 2px solid rgba(94,120,135,.18); }
+.ros2-meaning dt { font-size: 9px; font-weight: 750; }
+.ros2-meaning dd { margin: 4px 0 0; color: var(--ros2-muted); font-size: 8px; line-height: 1.5; }
+.ros2-report { margin-top: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-radius: 19px; background: rgba(94,120,135,.07); }
+.ros2-report > div { display: flex; gap: 8px; align-items: center; }
+.ros2-report svg { width: 18px; color: var(--ros2-blue); }
+.ros2-report span { display: grid; gap: 3px; }
+.ros2-report small { color: var(--ros2-muted); font-size: 9px; }
+.ros2-report a { display: flex; gap: 6px; align-items: center; color: var(--ros2-blue); font-size: 11px; font-weight: 750; text-decoration: none; }
+
+@media (max-width: 850px) {
+  .ros2-hero, .ros2-two-column { grid-template-columns: 1fr; }
+  .ros2-options { grid-template-columns: 1fr 1fr; }
+  .ros2-options .ros2-primary { grid-column: 1 / -1; }
+  .ros2-contract-grid, .ros2-summary { grid-template-columns: 1fr 1fr; }
+  .ros2-plan-lists, .ros2-meaning dl { grid-template-columns: 1fr; }
+  .ros2-data-plan-summary { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 560px) {
+  .ros2-wrap { width: min(100% - 24px, 1180px); }
+  .ros2-hero { padding-top: 42px; }
+  .ros2-panel, .ros2-run, .ros2-question { padding: 18px; border-radius: 22px; }
+  .ros2-options, .ros2-contract-grid, .ros2-summary { grid-template-columns: 1fr; }
+  .ros2-data-plan-summary, .ros2-data-plan-details { grid-template-columns: 1fr; }
+  .ros2-panel-heading, .ros2-run-heading, .ros2-panel-actions { align-items: stretch; flex-direction: column; }
+  .ros2-metrics { grid-template-columns: 1fr 1fr; }
+}

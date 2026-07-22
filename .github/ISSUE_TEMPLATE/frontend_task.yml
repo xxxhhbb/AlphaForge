@@ -1,0 +1,77 @@
+name: AlphaForge Frontend Task
+description: A bounded implementation slice from the frontend product requirements
+title: "[Frontend] "
+labels: ["frontend", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md` and `docs/alphaforge/API_REFERENCE.md` before implementation.
+
+  - type: textarea
+    id: user_outcome
+    attributes:
+      label: User outcome
+      description: What can the user understand or complete after this task?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: wave
+    attributes:
+      label: Frontend wave
+      options:
+        - F0 baseline / contract
+        - F1 brand / navigation / routes
+        - F2 question / plan / explicit confirmation
+        - F3 run / specialists / cancel / resume
+        - F4 result / report
+        - F5 evidence / system / compatibility
+        - F6 responsive / accessibility / acceptance
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Expected files or components
+      description: Existing files to reuse; avoid creating a parallel app.
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API contract
+      description: Endpoints and fields consumed; state whether backend changes are unnecessary.
+    validations:
+      required: true
+
+  - type: textarea
+    id: states
+    attributes:
+      label: Required states
+      placeholder: "loading, empty, running, completed, partial, blocked, failed, cancelled, corrupt response"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and tests
+      placeholder: |
+        - [ ] Behavior
+        - [ ] Vitest
+        - [ ] npm build
+        - [ ] 360px / desktop screenshots
+        - [ ] keyboard / aria
+        - [ ] Evidence authority preserved
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+    validations:
+      required: true

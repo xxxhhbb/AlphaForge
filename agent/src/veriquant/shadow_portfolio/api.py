@@ -1,0 +1,72 @@
+"""Stable import surface for the parallel shadow portfolio package."""
+
+from .fixture import (
+    InMemoryApprovedChallengerProvider,
+    InMemoryFrozenSnapshotProvider,
+    InMemoryMarketPriceProvider,
+    ShadowPortfolioFixture,
+    StaticRiskPolicyReader,
+    build_shadow_portfolio_fixture,
+    make_challenger,
+    make_prices,
+    make_vintage,
+)
+from .ledger import LedgerSnapshot, ShadowLedger
+from .models import (
+    ChallengerState,
+    ChallengerVersion,
+    DataVintage,
+    DriftAlert,
+    MarketPrice,
+    PaperFill,
+    PerformanceAttribution,
+    ShadowLedgerEvent,
+    ShadowRiskPolicy,
+    ShadowRunManifest,
+    ShadowRunRequest,
+    TargetPosition,
+)
+from .protocols import (
+    ApprovedChallengerProvider,
+    Clock,
+    FrozenSnapshotProvider,
+    MarketPriceProvider,
+    PortfolioConstructor,
+    RiskPolicyReader,
+)
+from .service import DeterministicClock, EqualWeightPortfolioConstructor, ShadowPortfolioService
+
+__all__ = [
+    "ApprovedChallengerProvider",
+    "ChallengerState",
+    "ChallengerVersion",
+    "Clock",
+    "DataVintage",
+    "DeterministicClock",
+    "DriftAlert",
+    "EqualWeightPortfolioConstructor",
+    "FrozenSnapshotProvider",
+    "InMemoryApprovedChallengerProvider",
+    "InMemoryFrozenSnapshotProvider",
+    "InMemoryMarketPriceProvider",
+    "LedgerSnapshot",
+    "MarketPrice",
+    "MarketPriceProvider",
+    "PaperFill",
+    "PerformanceAttribution",
+    "PortfolioConstructor",
+    "RiskPolicyReader",
+    "ShadowLedger",
+    "ShadowLedgerEvent",
+    "ShadowPortfolioFixture",
+    "ShadowPortfolioService",
+    "ShadowRiskPolicy",
+    "ShadowRunManifest",
+    "ShadowRunRequest",
+    "StaticRiskPolicyReader",
+    "TargetPosition",
+    "build_shadow_portfolio_fixture",
+    "make_challenger",
+    "make_prices",
+    "make_vintage",
+]

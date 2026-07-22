@@ -1,0 +1,98 @@
+name: AlphaForge Bug Report
+description: Report a reproducible AlphaForge product, API, research, or frontend defect
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, tokens, private data, sealed metrics, account details, or full `.env` output.
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened?
+      description: Include the actual and expected user-visible result.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      placeholder: |
+        1. Start `python agent\alphaforge_api_server.py --host 127.0.0.1 --port 8000`
+        2. Open `/research`
+        3. Create a standard plan
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Frontend / UX
+        - Research OS V3 API
+        - Research Agent / routing
+        - Data / PIT / availability
+        - Research Sandbox
+        - Evidence / Promotion
+        - Report / Workbench
+        - Docker / installation
+        - Documentation / CI
+        - Upstream Vibe compatibility
+    validations:
+      required: true
+
+  - type: dropdown
+    id: terminal_state
+    attributes:
+      label: Observed state
+      options:
+        - Planning / confirmation
+        - Running
+        - Completed
+        - Partial
+        - Blocked / data gap
+        - Failed
+        - Cancelled / resume
+        - Not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: run_id
+    attributes:
+      label: Run or Campaign ID
+      description: Public stable ID only; do not paste local artifact paths.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or HTTP response
+      description: Keep only the minimal non-secret excerpt.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Windows 11; Python 3.11; Node 20; Docker 29; local dedicated server"
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Tests or checks attempted
+      description: Exact command and result, including not-run reasons.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed secrets, private data, sealed details, and account information.
+          required: true
