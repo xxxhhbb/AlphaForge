@@ -67,5 +67,3 @@ alphaforge version    查看版本
 - [用户指南](USER_GUIDE.md)
 - [Docker 使用](DOCKER.md)
 - [故障排查](TROUBLESHOOTING.md)
-- [示例问题](../../examples/questions.md)
-- [示例报告](../../examples/sample-report.md)

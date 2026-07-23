@@ -191,7 +191,7 @@ alphaforge serve      # API + built frontend
 alphaforge version    # version and build information
 ~~~
 
-Explore options with <code>alphaforge &lt;command&gt; --help</code>. Example questions are available in [examples/questions.md](examples/questions.md), and a representative output is in [examples/sample-report.md](examples/sample-report.md).
+Explore options with <code>alphaforge &lt;command&gt; --help</code>.
 </details>
 
 ## Documentation
@@ -199,7 +199,6 @@ Explore options with <code>alphaforge &lt;command&gt; --help</code>. Example que
 | Goal | Start here |
 | --- | --- |
 | Install and run | [Quick Start](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [Troubleshooting](docs/alphaforge/TROUBLESHOOTING.md) |
-
 
 ## Contributing
 

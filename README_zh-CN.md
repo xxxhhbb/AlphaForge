@@ -191,7 +191,7 @@ alphaforge serve      # API + 已构建前端
 alphaforge version    # 版本与构建信息
 ~~~
 
-使用 <code>alphaforge &lt;command&gt; --help</code> 查看完整参数。可直接复用的研究问题位于 [examples/questions.md](examples/questions.md)，代表性输出位于 [examples/sample-report.md](examples/sample-report.md)。
+使用 <code>alphaforge &lt;command&gt; --help</code> 查看完整参数。
 </details>
 
 ## 文档地图
