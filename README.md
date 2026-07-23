@@ -39,8 +39,6 @@ The core design principle is simple:
 
 > **Agents explore. Deterministic evidence decides.**
 
-The Vibe-Trading runtime provides the operating shell—agent loops, tools, swarms, and orchestration—while AlphaForge adds the research contract: semantic formula review, isolated execution, frozen-data evidence, provenance, and explicit authority boundaries.
-
 > [!IMPORTANT]
 > AlphaForge is a research system. It does not place orders, control brokerage accounts, manage capital, or provide financial advice. Dynamic or unpinned data is treated as auxiliary until it passes the deterministic evidence path.
 
