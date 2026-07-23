@@ -86,27 +86,9 @@ The result is more than a chat transcript. AlphaForge produces a research answer
 
 ## How it works
 
-~~~mermaid
-flowchart LR
-    Q["Research question"] --> P["Campaign planner"]
-    P --> S["Specialist desks"]
-    S --> G["Review gateway"]
-    G --> X["Pinned no-network sandbox"]
-    X --> E["Deterministic evidence service"]
-    E --> A["Answer & report compiler"]
-    E -. "revise or reject" .-> S
-
-    subgraph DESKS["Parallel research"]
-      F["Fundamentals"]
-      V["Expectations & events"]
-      M["Market structure"]
-      D["Alternative data"]
-      R["Macro regime"]
-      T["Meta-alpha"]
-    end
-
-    S --- DESKS
-~~~
+<p align="center">
+  <img src="frontend/public/brand/alphaforge-research-flow-en-v1.png" alt="AlphaForge workflow from a research question to an evidence-bound report" width="100%" />
+</p>
 
 ### Authority by design
 
