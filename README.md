@@ -88,6 +88,14 @@ The result is more than a chat transcript. AlphaForge produces a research answer
   <img src="frontend/public/brand/alphaforge-research-flow-en-v1.png" alt="AlphaForge workflow from a research question to an evidence-bound report" width="100%" />
 </p>
 
+### System architecture
+
+The operating shell and specialist agents remain deliberately separated from review, isolated execution, and deterministic evidence authority.
+
+<p align="center">
+  <img src="frontend/public/brand/alphaforge-architecture-model-v1.png" alt="AlphaForge Research OS architecture: agents propose, machines verify, evidence decides" width="100%" />
+</p>
+
 ### Authority by design
 
 | Component | May do | May not do |

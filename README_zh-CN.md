@@ -88,6 +88,14 @@ alphaforge research "盈利预测上修广度能否预测未来 20 日超额收�
   <img src="frontend/public/brand/alphaforge-research-flow-v1.png" alt="AlphaForge 从研究问题到可信答案的完整流程" width="100%" />
 </p>
 
+### 系统架构总览
+
+运行外壳与专业研究组负责探索；审查、隔离执行和确定性 Evidence 权限则保持独立。
+
+<p align="center">
+  <img src="frontend/public/brand/alphaforge-architecture-model-v1.png" alt="AlphaForge Research OS 系统架构：智能体提出，机器验证，证据裁决" width="100%" />
+</p>
+
 ### 权限由架构决定
 
 | 组件 | 可以做 | 不可以做 |
