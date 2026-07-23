@@ -1,193 +1,242 @@
-# AlphaForge（千因研究院）
+# AlphaForge · 千因研究院
 
-> 面向 Alpha 研究的多专业智能体研究操作系统：让研究代理负责提出问题、调查、实验和解释，让确定性服务负责数据时点、证据、权限与复现。
+<p align="center">
+  <strong>自主多智能体 Alpha 研究平台</strong><br/>
+  千种假设，一套证据，一个答案。
+</p>
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Research_OS-009688)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <img src="frontend/public/brand/alphaforge-hero-v1.png" alt="AlphaForge autonomous multi-agent alpha research" width="100%"/>
+</p>
 
-AlphaForge 将一个自然语言 Alpha 问题编译成受预算约束的 Research Campaign，选择一到六个专业研究组，在隔离环境里形成候选与标准研究表，再由独立的确定性服务给出可追溯的 Evidence 和中文报告。
+<p align="center">
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+"/></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Research_OS-009688" alt="FastAPI"/></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-F2C94C" alt="MIT License"/></a>
+</p>
 
-产品名统一使用 **AlphaForge（千因研究院）**。代码中的 `VeriQuant` 是内部可信研究内核；`vibe-trading`、`vibe-trading-ai` 等名称是上游运行时与包兼容标识，不是本产品对外品牌。
+> **提出一个 Alpha 研究问题，让一支 AI 量化研究团队完成调查、实验、验证与报告。**
 
-## 当前状态
+AlphaForge 面向中国 A 股研究场景，将自然语言问题转化为一项有限、可追踪的研究任务。多个专业研究组自主制定计划、调查数据、设计候选和编写实验；安全沙箱负责执行，独立机器证据服务负责计算指标，最终交付一份结论清晰、过程完整、数字可追溯的专业中文研究报告。
 
-最近的产品收敛门禁结论为：
+[快速开始](#快速开始) · [研究流程](#从问题到答案) · [专业研究组](#六大专业研究组) · [示例问题](examples/questions.md) · [架构文档](docs/alphaforge/ARCHITECTURE.md) · [开发指南](CONTRIBUTING.md)
 
-- `QUALIFIED_FOR_RESEARCH_PRODUCT_WITH_AUXILIARY_LIMITATION`；
-- 500 个冻结问题已完成静态解析与路由，未声称逐题真实执行；
-- 25 个代表研究家族通过；
-- 六个专业研究组均有资格收据，其中 5 组形成官方 Evidence 路径，1 组受辅助证据上限约束；
-- 最终产品脊柱与收敛门禁记录为 194 项测试通过；
-- 最新三组专业报告已经跑通规划、只读调查、代码审查、隔离执行和中文报告，但报告中的回归结果仍标记为 `AUXILIARY_ONLY`，尚未完成成本后收益、直接增量性、完整状态稳定性和独立晋级。
-
-这意味着 AlphaForge 已可用于可复现研究与报告生成，但任何单次结果都不等于可交易 Alpha，也不构成投资建议。
-
-详见 [当前状态与已知限制](docs/alphaforge/CURRENT_STATUS.md)。
-
-## 一条完整产品路径
-
-```text
-研究问题
-  → 研究计划与数据范围
-  → 用户显式确认
-  → 选择 1–6 个专业研究组
-  → 有界 AgentLoop + 只读工具
-  → 冻结数据与来源身份
-  → 研究代码机械审查
-  → 无网络隔离运行
-  → 标准研究表
-  → 独立确定性评价
-  → Evidence / 明确的数据缺口
-  → 面向用户的中文研究报告
-```
-
-六个专业研究组为：
-
-1. 基本面研究组；
-2. 预期与事件研究组；
-3. 市场行为与交易可行性研究组；
-4. 另类数据研究组；
-5. 宏观状态研究组；
-6. 组合增量研究组。
-
-系统按问题选择必要研究组，不会为了“多智能体”而让六组全部运行。
-
-## 五分钟开始
-
-### 方式 A：本地 AlphaForge 专用服务（前端开发首选）
-
-要求 Python 3.11、Node.js 20 和 PowerShell 7。
+## 一句话体验
 
 ```powershell
-Set-Location "C:\path\to\AlphaForge"
-Copy-Item agent\.env.example agent\.env
+alphaforge research "在大 A 市场寻找预测未来 20 日收益、与现有动量低相关的 Alpha，并比较成本后表现。"
+```
+
+AlphaForge 会自动完成：
+
+```text
+理解研究问题
+→ 选择专业研究组
+→ 调查数据与已有证据
+→ 形成多个研究候选
+→ 审查并隔离运行实验
+→ 独立计算机器 Evidence
+→ 汇总支持、反对与冲突
+→ 生成正式中文研究报告
+```
+
+## 为什么是 AlphaForge
+
+### 自主研究，而不是模板问答
+
+研究 Agent 可以主动规划、调用获准的数据工具、选择并披露代理变量、编写多种实验、自我质疑并修订。系统固定的是数据身份、安全边界和证据标准，而不是研究员的思考方式。
+
+### 多专业协作，而不是单模型独白
+
+同一个问题可以由多个研究组独立提出假设。系统保留研究分歧，通过同一套机器证据比较候选，让最终报告同时呈现支持证据、反对证据和适用条件。
+
+### 机器证据，而不是模型自报指标
+
+研究模型负责提出候选和解释，独立服务负责数据时点、标准结果表、IC/ICIR、成本、换手、稳定性、相关性和增量性等计算。研究过程与结论分工清晰。
+
+### 从结论到过程，全链路可解释
+
+报告不仅回答“结果是什么”，还会展示系统如何理解问题、研究了哪些可能性、为什么选择这些实验、哪些候选被拒绝、数字意味着什么，以及下一项最值得做的实验。
+
+## 六大专业研究组
+
+| 专业研究组 | 主要研究方向 |
+|---|---|
+| 基本面研究组 | 估值、盈利能力、成长、现金流、财务质量与资产负债结构 |
+| 预期与事件研究组 | 财报、业绩预告、业绩快报、预期变化和事件后漂移 |
+| 市场行为与交易结构研究组 | 动量、反转、波动、成交量、换手、流动性和交易成本 |
+| 另类信息研究组 | 新闻、研报、关注度、资金流、龙虎榜和其他辅助信息 |
+| 宏观状态研究组 | 利率、指数状态、风险偏好、市场波动和流动性环境 |
+| 组合增量研究组 | 因子相关性、残差 Alpha、组合缺口、增量价值和因子衰减 |
+
+系统根据问题选择一个到多个研究组；每组拥有独立上下文、工具视图、预算和产物空间。
+
+## 从问题到答案
+
+```mermaid
+flowchart LR
+    Q["用户研究问题"] --> P["研究计划"]
+    P --> A["多专业研究组"]
+    A --> T["只读数据与资料工具"]
+    T --> X["多个实验候选"]
+    X --> G["安全审查网关"]
+    G --> S["隔离研究沙箱"]
+    S --> O["标准研究结果"]
+    O --> E["独立机器 Evidence"]
+    E --> R["专业中文报告"]
+```
+
+一次合法研究可以得到明确支持、条件性支持、否定结论、部分研究结果或具体的数据需求。每种结果都保留已完成的研究过程和下一步行动。
+
+## 适合研究的问题
+
+```text
+挖掘 50 日动量的成交量确认、波动调整和流动性过滤变体。
+
+ROE、经营现金流和估值组合能否预测未来 20 日收益？
+
+财报公告后的价格反应是延续还是反转？
+
+高低 Shibor 状态下，哪些 Alpha 更稳定？
+
+寻找与现有动量和价值因子低相关的新增 Alpha。
+
+某个因子近期为什么衰减，应该修订、缩减还是继续观察？
+```
+
+更多可直接使用的问题见 [研究问题示例](examples/questions.md)。
+
+## 快速开始
+
+### 1. 安装
+
+```powershell
+git clone https://github.com/xxxhhbb/AlphaForge.git
+Set-Location AlphaForge
 
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
+```
 
+### 2. 运行离线演示
+
+```powershell
+alphaforge demo --offline --seed 7
+```
+
+离线演示使用仓库内的小型冻结数据，不需要模型密钥。
+
+### 3. 启动本地研究服务
+
+```powershell
 Set-Location frontend
 npm ci
 npm run build
 Set-Location ..
 
-python agent\alphaforge_api_server.py --host 127.0.0.1 --port 8000
+alphaforge serve --host 127.0.0.1 --port 8000
 ```
 
-打开 <http://127.0.0.1:8000>。该入口只注册 AlphaForge Research OS、只读 Workbench 与健康检查，不注册 Vibe 的实时交易、Broker、OAuth、订单或 Mandate 路由。
+打开 <http://127.0.0.1:8000>。
 
-如需真实模型或数据源，在本地 `agent/.env` 中配置；不要提交该文件。没有凭据时应使用离线/冻结数据路径，缺失能力必须显示为明确的部分结果或数据缺口。
-
-### 方式 B：Docker 一体化兼容服务
-
-要求 Docker Desktop 或 Docker Engine + Compose。
+### 4. 启用真实研究模型
 
 ```powershell
-Set-Location "C:\path\to\AlphaForge"
 Copy-Item agent\.env.example agent\.env
-docker compose up --build -d
-docker compose ps
 ```
 
-打开 <http://127.0.0.1:8899>。默认 Compose 使用上游兼容服务器并内嵌 AlphaForge 页面和 API；它还包含 Vibe 的兼容路由，因此不要把该模式描述为“只暴露研究接口”。默认端口只绑定本机回环地址。
-
-停止服务：
+在本机 `agent/.env` 配置兼容的模型 Provider，然后运行：
 
 ```powershell
-docker compose down
+alphaforge research "成交量确认能否增强 50 日动量，并预测未来 20 日收益？" `
+  --label-horizon 20 `
+  --print-report
 ```
 
-命名卷保存运行、会话和用户状态；只有明确要清空本地状态时才使用 `docker compose down -v`。
+配置文件、密钥和研究产物默认不会进入 Git。
 
-完整步骤见 [快速开始](docs/alphaforge/QUICKSTART.md) 与 [Docker 指南](docs/alphaforge/DOCKER.md)。
+## 研究报告包含什么
 
-## 文档导航
+每份报告围绕用户问题组织，包含：
 
-| 你要解决的问题 | 文档 |
-| --- | --- |
-| 先理解产品和研究理念 | [产品理念](docs/alphaforge/PRODUCT_VISION.md) |
-| 看真实架构、数据流和权限边界 | [系统架构](docs/alphaforge/ARCHITECTURE.md) |
-| 从零安装并运行 | [快速开始](docs/alphaforge/QUICKSTART.md) |
-| 安装和维护 Docker | [Docker 指南](docs/alphaforge/DOCKER.md) |
-| 配置模型、数据与环境变量 | [配置指南](docs/alphaforge/CONFIGURATION.md) |
-| 发起研究并阅读结果 | [用户指南](docs/alphaforge/USER_GUIDE.md) |
-| 对接 Research OS V3 API | [API 参考](docs/alphaforge/API_REFERENCE.md) |
-| 理解安全、Evidence 与金融权限 | [安全与权限](docs/alphaforge/SECURITY_AND_AUTHORITY.md) |
-| 做后端或研究内核开发 | [开发与测试](docs/alphaforge/DEVELOPMENT.md) |
-| 上传 GitHub、分支和 PR 协作 | [GitHub 协作](docs/alphaforge/GITHUB_COLLABORATION.md) |
-| 让 AI 继续完成前端 | [前端产品需求](docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md) |
-| 直接复制给前端 AI 的任务 | [前端 AI Prompt](docs/alphaforge/FRONTEND_AI_PROMPT.md) |
-| 看完成度、缺口和后续里程碑 | [当前状态](docs/alphaforge/CURRENT_STATUS.md) · [路线图](docs/alphaforge/ROADMAP.md) |
-| 排查常见问题 | [故障排查](docs/alphaforge/TROUBLESHOOTING.md) |
+- 一句话机器结论；
+- 实际测试了什么；
+- 每个专业研究组的假设与实验路线；
+- 候选定义和研究代码摘要；
+- 数据范围、覆盖率和时间语义；
+- 成本后表现、换手、稳定性和增量性；
+- 支持证据、反对证据和分支冲突；
+- 对原问题的逐项回答；
+- 下一项最有价值的实验。
 
-完整索引见 [AlphaForge 文档中心](docs/alphaforge/README.md)。
+示例见 [客户研究报告](examples/sample-report.md)。
 
-## 仓库结构
+## 可信研究架构
+
+AlphaForge 将开放式研究能力和确定性证据能力组合在同一条产品路径中：
+
+| 层 | 职责 |
+|---|---|
+| Research Agent | 规划、调查、提出候选、编写实验和解释结果 |
+| Research Toolbox | 行情、财务、事件、宏观、资料和因子库等只读研究工具 |
+| Review Gateway | 研究完整性审查、字段闭包、静态安全与权限检查 |
+| Research Sandbox | 固定资源、无网络、冻结数据上的隔离实验运行 |
+| Evidence Service | 独立计算机器指标、成本、稳定性、增量性和统计证据 |
+| Report Composer | 将研究过程和机器事实组织成客户可读中文报告 |
+
+完整设计见 [架构文档](docs/alphaforge/ARCHITECTURE.md) 和 [安全与权限](docs/alphaforge/SECURITY_AND_AUTHORITY.md)。
+
+## 项目结构
 
 ```text
 agent/
-  alphaforge_api_server.py      # AlphaForge 本地专用安全入口
-  api_server.py                 # Vibe 兼容的一体化入口
-  src/agent/                    # ReAct AgentLoop、上下文与工具注册
-  src/swarm/                    # DAG/Swarm 调度与隔离 worker
-  src/veriquant/                # 冻结数据、研究控制、Evidence、报告等可信内核
-  tests/                        # Python 测试
-frontend/
-  src/pages/                    # AlphaForge 页面
-  src/features/research-os-v3/  # V3 类型、客户端、投影与组件
-  src/features/research-os-v3-launch/ # 启动与运行流程
-docs/alphaforge/                # 面向用户、协作者和 AI 的公开文档
-.autobuild/veriquant/           # 本地运行产物与收据；不要整体提交
+  alphaforge_cli.py             # AlphaForge 公开命令入口
+  alphaforge_api_server.py      # 本地 Research OS 与 UI 服务
+  src/agent/                    # 有界研究 AgentLoop
+  src/swarm/                    # 多研究组并行与依赖调度
+  src/tools/                    # 数据和资料工具
+  src/veriquant/                # 冻结数据、Evidence、报告与可信研究内核
+  tests/veriquant/              # 产品、证据、PIT、安全和回放测试
+
+frontend/                       # AlphaForge 中文研究界面
+docs/alphaforge/                # 架构、配置、API、安全和开发文档
+examples/                       # 研究问题与客户报告示例
 ```
 
-## 开发检查
-
-后端窄集：
+## 开发与测试
 
 ```powershell
+python scripts\check_alphaforge_docs.py
+
 python -m pytest -q -p no:cacheprovider --confcutdir=agent/tests/veriquant `
-  agent/tests/veriquant/research_os_v3 `
+  agent/tests/veriquant/research_answer `
   agent/tests/veriquant/agent_research_product
-```
 
-前端：
-
-```powershell
 Set-Location frontend
-npm ci
 npm run test:run
 npm run build
 ```
 
-任何涉及 Evidence、PIT、研究沙箱、Promotion、风险、订单或账本的修改，都必须补针对性负向测试，不能仅用页面可显示或报告已生成作为通过依据。
+贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [SECURITY.md](SECURITY.md)。
 
-## GitHub 协作建议
+## Roadmap
 
-推荐仓库名：`alphaforge-research-os`。
+- 更丰富的 A 股数据冻结与双时态研究面板；
+- 更强的事件研究、状态比较和组合增量实验；
+- 可恢复的长时多研究组任务；
+- 研究报告可视化与共享；
+- 因子注册、衰减诊断和持续研究；
+- 更完整的离线部署与可复现发布包。
 
-当前工作区的 `.git` 元数据为空，`git status` 会报告“not a git repository”。首次上传前应先做密钥和产物检查，再初始化新仓库；不要把真实 `agent/.env`、模型密钥、Token、运行产物、账户信息或本地 Agent 记忆提交到 GitHub。
+详细路线见 [AlphaForge Roadmap](docs/alphaforge/ROADMAP.md)。
 
-完整、可复制的初始化与推送命令见 [GitHub 协作指南](docs/alphaforge/GITHUB_COLLABORATION.md)。
+## 致谢
 
-## 安全声明
+感谢 Vibe-Trading、Qlib 及开源量化与智能体社区提供的优秀基础设施与启发。
 
-- 默认离线、回环地址、最小权限、失败关闭；
-- LLM 只能提出 `DRAFT` 或辅助研究结果，不能生成官方指标或自行晋级；
-- 研究代码只能在经过机械审查的无网络隔离环境中运行；
-- 前端只能展示后端允许的公开字段，不能创建或修改 Evidence、Promotion、组合、风险、订单或账本；
-- 默认禁止真实 Broker、真实订单、真实资金与密钥进入 AlphaForge 研究产品路径。
+## License
 
-详见 [SECURITY.md](SECURITY.md) 和 [安全与权限边界](docs/alphaforge/SECURITY_AND_AUTHORITY.md)。
-
-## 上游与许可
-
-AlphaForge 在 HKUDS 的开源项目 [Vibe-Trading](https://github.com/HKUDS/Vibe-Trading) 基础上扩展了 VeriQuant 可信研究内核、Research OS、产品门禁、报告与 AlphaForge 前端。为兼容上游生态，部分包名、CLI、目录和 Docker 服务名仍保留 `vibe-trading`。
-
-项目遵循 [MIT License](LICENSE)。上游与因子公式归属见 [NOTICE](NOTICE) 及各因子库目录中的 `LICENSE.md`/`NOTICE`。重命名产品不改变上游版权与许可证义务。
-
-## 免责声明
-
-本项目用于研究与软件工程验证，不构成投资建议、收益承诺或交易授权。研究结果可能为负向、部分完成、数据缺口或系统失败；只有绑定冻结输入并由独立确定性服务生成的指标才可标记为官方 Evidence，且官方 Evidence 也不自动意味着可上线或可交易。
+[MIT License](LICENSE)。第三方代码、数据接口和因子定义的归属与许可见 [NOTICE](NOTICE) 及相关目录说明。

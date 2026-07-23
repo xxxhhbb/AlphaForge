@@ -1,6 +1,6 @@
 # Contributing to AlphaForge
 
-AlphaForge（千因研究院）是构建在 Vibe-Trading 运行时之上的可信多专业 Alpha 研究操作系统。欢迎前端、研究内核、数据、评估、报告、文档和测试贡献。
+AlphaForge（千因研究院）是可信的自主多智能体 Alpha 研究平台。欢迎研究运行时、数据、评估、报告、文档、测试和产品体验贡献。
 
 提交前请先读：
 
@@ -14,9 +14,9 @@ AlphaForge（千因研究院）是构建在 Vibe-Trading 运行时之上的可�
 ## 产品命名
 
 - 对外产品统一使用 `AlphaForge（千因研究院）`；
-- `VeriQuant` 是内部确定性内核；
-- `Vibe-Trading` 是上游与兼容包/CLI 名；
-- 不要为了品牌一次性重命名 Python 包、环境变量和所有 import，这需要独立迁移计划。
+- `VeriQuant` 是内部确定性研究内核；
+- 公共命令、文档、截图和新接口统一使用 `alphaforge`；
+- 内部兼容 import 和环境变量应通过独立迁移逐步收敛，避免破坏已有研究产物。
 
 ## 开发环境
 
@@ -170,6 +170,6 @@ python scripts\check_alphaforge_docs.py
 - 已实现与路线图分开；
 - 不提交 `.autobuild`、真实报告数据或密钥。
 
-## 上游与许可
+## 许可与归属
 
-保留 `LICENSE`、`NOTICE`、因子目录许可和上游归属。产品使用 AlphaForge 品牌不改变 HKUDS/Vibe-Trading 及其他来源的版权义务。
+保留 `LICENSE`、`NOTICE`、因子目录许可和所有第三方归属。新增依赖或移植研究实现时，必须记录来源、许可证和适用的版权声明。

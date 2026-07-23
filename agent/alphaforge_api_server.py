@@ -9,6 +9,7 @@ routes, broker routes, mandates, OAuth, or order endpoints.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import sys
 from typing import Any
@@ -66,6 +67,8 @@ def _hostname(value: str) -> str:
 
 def _validate_loopback_host(host: str) -> str:
     normalized = _hostname(host)
+    if normalized == "0.0.0.0" and os.getenv("ALPHAFORGE_TRUST_CONTAINER_BIND") == "1":
+        return normalized
     if normalized not in LOOPBACK_NAMES:
         raise ValueError("AlphaForge API server is loopback-only; use 127.0.0.1")
     return normalized

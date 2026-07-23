@@ -1,47 +1,63 @@
-# Security Policy
+# AlphaForge Security Policy
 
-## Supported Versions
+AlphaForge is an autonomous multi-agent quantitative **research** platform. Its
+public product surface is designed around read-only investigation, isolated
+experiments, deterministic Evidence, and loopback-only access.
+
+## Supported versions
 
 | Version | Supported |
-|---------|:---------:|
-| latest  | ✅        |
+|---|:---:|
+| Latest alpha release | ✅ |
 
-## Reporting a Vulnerability
+## Report a vulnerability
 
-If you discover a security vulnerability, please report it responsibly:
+Please do not open a public issue for a suspected vulnerability.
 
-1. **Do NOT open a public issue.**
-2. Use the [GitHub Security Advisory](https://github.com/HKUDS/Vibe-Trading/security/advisories/new) to report privately.
-3. Include steps to reproduce, potential impact, and any suggested fixes.
+1. Open a private [GitHub Security Advisory](https://github.com/xxxhhbb/AlphaForge/security/advisories/new).
+2. Include reproduction steps, affected revision, impact, and a minimal proof of concept.
+3. Remove API keys, tokens, market-data credentials, personal data, and proprietary datasets.
 
-We will acknowledge your report within **5 business days** and work with you to resolve the issue.
+We aim to acknowledge complete reports within five business days.
+
+## Security boundaries
+
+AlphaForge applies these boundaries to the research product path:
+
+- the dedicated API/UI server binds to loopback and fails closed on untrusted hosts and origins;
+- research models receive filtered, read-only tools rather than unrestricted shell or filesystem access;
+- generated research code is mechanically reviewed and executed in a pinned, network-disabled sandbox;
+- frozen dataset identities and point-in-time availability are recorded before machine evaluation;
+- official metrics are recomputed by deterministic Evidence services;
+- sealed evaluation data, provider secrets, promotion, risk approval, orders, and ledgers remain outside model authority;
+- a research result never creates a real order or connects a live brokerage account.
+
+## Secrets and local configuration
+
+- Keep provider and data-vendor credentials in `agent/.env`; it is ignored by Git.
+- Never paste secrets into issues, reports, screenshots, traces, or committed fixtures.
+- Use restricted keys and rotate a key immediately if it is exposed.
+- AlphaForge reports and public examples must use redacted or synthetic values.
+
+## Generated research code
+
+Do not bypass the AlphaForge review gateway to run untrusted model-generated
+code. The supported research path uses a constrained workspace, approved
+libraries, frozen read-only inputs, no network, resource limits, typed output
+contracts, and independent evaluation. A local user who runs generated source
+outside that path assumes the same risks as running any untrusted program.
 
 ## Scope
 
-This policy applies to the [HKUDS/Vibe-Trading](https://github.com/HKUDS/Vibe-Trading) repository.
+Security reports are especially valuable for:
 
-## Generated backtest code
+- path traversal or arbitrary file access;
+- secret, sealed-data, or cross-branch leakage;
+- sandbox escape or network access from generated code;
+- authority escalation into promotion, risk, execution, or ledger services;
+- bypasses of point-in-time validation or Evidence identity;
+- unsafe API routes or non-loopback exposure;
+- replay, idempotency, or append-only ledger violations.
 
-Backtest runs may execute generated Python strategy code locally. Treat generated strategies as local code you review before running. The runner validates run directories and uses a narrow subprocess environment: it preserves OS/Python basics, proxy/certificate settings, allowed run-root configuration, and read-only market-data credentials needed by loaders, but it does not forward LLM provider keys, API server bearer tokens, shell-tool opt-ins, broker trading secrets, or live/advisory toggles by default.
-
-The backtest subprocess is still network-capable so loaders can fetch public or user-authorized market data. Do not run untrusted generated strategies in an environment that exposes sensitive files, secret-bearing proxy variables, or network services you would not trust local code to access.
-
-## Official channels & impersonation
-
-Vibe-Trading is an open-source finance **research** tool. We will **never** ask you to
-"verify", connect, or sign with a crypto wallet to join our community, claim an airdrop, or
-unlock features — any such prompt is a scam.
-
-- Our only official Discord is **https://discord.gg/6TdQnT5xcF** (the HKUDS community server,
-  also linked from the README). Treat any other "Vibe-Trading" Discord as an impostor.
-- If a Discord or website asks you to connect/sign a wallet for "verification", do not do it.
-  If you already did, move your funds to a fresh wallet and revoke approvals (e.g. via
-  [revoke.cash](https://revoke.cash)).
-
-See the pinned security announcement in [Discussions](https://github.com/HKUDS/Vibe-Trading/discussions)
-for the 2026-06-18 impostor-Discord incident.
-
-## Disclosure
-
-- Please do not publicly disclose the vulnerability until we have released a fix.
-- We will credit reporters in the release notes (unless you prefer anonymity).
+Please wait for a coordinated fix before public disclosure. Reporter credit is
+available in release notes unless anonymity is requested.

@@ -1,6 +1,6 @@
 """Single source of truth for the CLI version string.
 
-Reads ``vibe-trading-ai``'s installed package metadata when available
+Reads AlphaForge's installed package metadata when available
 (``pip install -e .`` is enough). For an un-installed checkout (e.g. running
 straight from a clone with ``PYTHONPATH=agent``) it falls back to reading the
 version straight out of ``pyproject.toml`` — so ``pyproject.toml`` is the one
@@ -36,9 +36,12 @@ try:
     from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
     try:
-        __version__: Final[str] = _pkg_version("vibe-trading-ai")
+        __version__: Final[str] = _pkg_version("alphaforge-research")
     except PackageNotFoundError:
-        __version__ = _version_from_pyproject()
+        try:
+            __version__ = _pkg_version("vibe-trading-ai")
+        except PackageNotFoundError:
+            __version__ = _version_from_pyproject()
 except ImportError:  # pragma: no cover — importlib.metadata is stdlib on 3.8+
     __version__ = _version_from_pyproject()
 

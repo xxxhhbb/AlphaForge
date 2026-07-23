@@ -1,16 +1,14 @@
 [project]
-name = "vibe-trading-ai"
-version = "0.1.11"
-description = "Natural-language finance research AI agent with backtesting"
+name = "alphaforge-research"
+version = "0.1.0a1"
+description = "Autonomous multi-agent Alpha research platform for China A-shares"
 requires-python = ">=3.11"
 license = "MIT"
 readme = "README.md"
-authors = [
-    {name = "HKUDS", email = "hkuds@connect.hku.hk"},
-]
-keywords = ["finance", "trading", "backtesting", "agent", "swarm", "quantitative"]
+authors = [{name = "AlphaForge Contributors"}]
+keywords = ["alpha-research", "multi-agent", "quantitative", "evidence", "a-shares"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -61,18 +59,19 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://vibetrading.wiki/"
-Documentation = "https://vibetrading.wiki/docs/"
-Repository = "https://github.com/HKUDS/Vibe-Trading"
-Issues = "https://github.com/HKUDS/Vibe-Trading/issues"
+Homepage = "https://github.com/xxxhhbb/AlphaForge"
+Documentation = "https://github.com/xxxhhbb/AlphaForge/tree/main/docs/alphaforge"
+Repository = "https://github.com/xxxhhbb/AlphaForge"
+Issues = "https://github.com/xxxhhbb/AlphaForge/issues"
 
 [project.scripts]
+alphaforge = "alphaforge_cli:main"
 vibe-trading = "cli:main"
 vibe-trading-mcp = "mcp_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "agent"}
-py-modules = ["api_server", "mcp_server"]
+py-modules = ["alphaforge_cli", "alphaforge_api_server", "api_server", "mcp_server"]
 
 [tool.setuptools.packages.find]
 where = ["agent"]

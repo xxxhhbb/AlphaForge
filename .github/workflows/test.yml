@@ -32,11 +32,19 @@ jobs:
         run: |
           cd agent
           python -m compileall -q cli
+          python -m py_compile alphaforge_cli.py
+          python -m py_compile alphaforge_api_server.py
           python -m py_compile api_server.py
           python -m py_compile mcp_server.py
           python -m py_compile src/agent/loop.py
           python -m py_compile src/tools/__init__.py
           python -m py_compile backtest/runner.py
+
+      - name: AlphaForge public CLI smoke
+        run: |
+          alphaforge --version
+          alphaforge --help
+          alphaforge demo --offline --seed 7 --output-dir .autobuild/veriquant/ci-demo
 
       - name: Run tests
         # test_e2e_harness_v2.py is gated by VIBE_TRADING_RUN_LIVE_E2E

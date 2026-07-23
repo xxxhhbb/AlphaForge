@@ -48,10 +48,10 @@ RUN pip install --no-cache-dir -e .
 FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3 AS runtime
 # python:3.11-slim digest resolved 2026-07-13
 
-LABEL org.opencontainers.image.title="Vibe-Trading" \
-    org.opencontainers.image.description="Natural-language finance research AI agent with backtesting" \
-    org.opencontainers.image.version="0.1.11" \
-    org.opencontainers.image.source="https://github.com/HKUDS/Vibe-Trading" \
+LABEL org.opencontainers.image.title="AlphaForge" \
+    org.opencontainers.image.description="Autonomous multi-agent Alpha research platform" \
+    org.opencontainers.image.version="0.1.0-alpha.1" \
+    org.opencontainers.image.source="https://github.com/xxxhhbb/AlphaForge" \
     org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
@@ -96,12 +96,14 @@ RUN useradd --create-home --shell /usr/sbin/nologin vibe \
     && chown -R vibe:vibe /app /home/vibe/.vibe-trading
 USER vibe
 
-# Default port
-EXPOSE 8899
+# AlphaForge's dedicated research API/UI port.
+EXPOSE 8000
 
-# Health check — hits /live (liveness probe; /health remains a legacy alias).
+# Health check uses the dedicated research-only application.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8899/live')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')" || exit 1
 
-# Run API server (serves frontend/dist as static files)
-CMD ["vibe-trading", "serve", "--host", "0.0.0.0", "--port", "8899"]
+# Run only the AlphaForge research application. Compose binds it to host
+# loopback; the explicit container flag is required for the internal 0.0.0.0
+# bind and does not relax request Host/Origin checks.
+CMD ["alphaforge", "serve", "--host", "0.0.0.0", "--port", "8000"]
