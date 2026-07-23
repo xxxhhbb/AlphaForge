@@ -191,7 +191,6 @@ alphaforge version    # 版本与构建信息
 | 目标 | 从这里开始 |
 | --- | --- |
 | 安装与运行 | [快速开始](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [故障排查](docs/alphaforge/TROUBLESHOOTING.md) |
-| 使用产品 | [用户指南](docs/alphaforge/USER_GUIDE.md) · [示例问题](examples/questions.md) · [示例报告](examples/sample-report.md) |
 
 ## 参与贡献
 
