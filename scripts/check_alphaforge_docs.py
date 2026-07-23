@@ -34,7 +34,14 @@ ABSOLUTE_PRIVATE_PATH_RE = re.compile(
 
 
 def markdown_files() -> list[Path]:
-    files = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "AGENT_CONTRIBUTOR_GUIDE.md"]
+    files = [
+        ROOT / "README.md",
+        ROOT / "README_zh-CN.md",
+        ROOT / "README_en.md",
+        ROOT / "README_zh.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "AGENT_CONTRIBUTOR_GUIDE.md",
+    ]
     files.extend(sorted(DOC_ROOT.glob("*.md")))
     return [path for path in files if path.exists()]
 

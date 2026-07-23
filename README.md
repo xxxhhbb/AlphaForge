@@ -1,108 +1,155 @@
-# AlphaForge · 千因研究院
-
 <p align="center">
-  <strong>自主多智能体 Alpha 研究平台</strong><br/>
-  千种假设，一套证据，一个答案。
+  <strong>English</strong> · <a href="README_zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
-  <img src="frontend/public/brand/alphaforge-hero-v1.png" alt="AlphaForge autonomous multi-agent alpha research" width="100%"/>
+  <img src="frontend/public/brand/alphaforge-hero-v1.png" alt="AlphaForge — Autonomous Multi-Agent Alpha Research OS" width="100%" />
+</p>
+
+<h1 align="center">AlphaForge</h1>
+
+<p align="center">
+  <strong>Autonomous Multi-Agent Alpha Research OS</strong><br />
+  From an open-ended market question to an evidence-bound answer.
 </p>
 
 <p align="center">
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+"/></a>
-  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Research_OS-009688" alt="FastAPI"/></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-F2C94C" alt="MIT License"/></a>
+  <a href="docs/alphaforge/QUICKSTART.md"><img alt="Quick Start" src="https://img.shields.io/badge/Quick_Start-5_minutes-20B2AA?style=flat-square" /></a>
+  <a href="pyproject.toml"><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" /></a>
+  <a href="frontend/package.json"><img alt="React 19" src="https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB" /></a>
+  <a href="docs/alphaforge/DOCKER.md"><img alt="Docker" src="https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-8A2BE2?style=flat-square" /></a>
+  <img alt="Research only" src="https://img.shields.io/badge/Scope-research_only-6B7280?style=flat-square" />
 </p>
-
-> **提出一个 Alpha 研究问题，让一支 AI 量化研究团队完成调查、实验、验证与报告。**
-
-AlphaForge 面向中国 A 股研究场景，将自然语言问题转化为一项有限、可追踪的研究任务。多个专业研究组自主制定计划、调查数据、设计候选和编写实验；安全沙箱负责执行，独立机器证据服务负责计算指标，最终交付一份结论清晰、过程完整、数字可追溯的专业中文研究报告。
-
-[快速开始](#快速开始) · [研究流程](#从问题到答案) · [专业研究组](#六大专业研究组) · [示例问题](examples/questions.md) · [架构文档](docs/alphaforge/ARCHITECTURE.md) · [开发指南](CONTRIBUTING.md)
-
-## 一句话体验
-
-```powershell
-alphaforge research "在大 A 市场寻找预测未来 20 日收益、与现有动量低相关的 Alpha，并比较成本后表现。"
-```
-
-AlphaForge 会自动完成：
-
-```text
-理解研究问题
-→ 选择专业研究组
-→ 调查数据与已有证据
-→ 形成多个研究候选
-→ 审查并隔离运行实验
-→ 独立计算机器 Evidence
-→ 汇总支持、反对与冲突
-→ 生成正式中文研究报告
-```
-
-## 为什么是 AlphaForge
-
-### 自主研究，而不是模板问答
-
-研究 Agent 可以主动规划、调用获准的数据工具、选择并披露代理变量、编写多种实验、自我质疑并修订。系统固定的是数据身份、安全边界和证据标准，而不是研究员的思考方式。
-
-### 多专业协作，而不是单模型独白
-
-同一个问题可以由多个研究组独立提出假设。系统保留研究分歧，通过同一套机器证据比较候选，让最终报告同时呈现支持证据、反对证据和适用条件。
-
-### 机器证据，而不是模型自报指标
-
-研究模型负责提出候选和解释，独立服务负责数据时点、标准结果表、IC/ICIR、成本、换手、稳定性、相关性和增量性等计算。研究过程与结论分工清晰。
-
-### 从结论到过程，全链路可解释
-
-报告不仅回答“结果是什么”，还会展示系统如何理解问题、研究了哪些可能性、为什么选择这些实验、哪些候选被拒绝、数字意味着什么，以及下一项最值得做的实验。
-
-## 六大专业研究组
-
-| 专业研究组 | 主要研究方向 |
-|---|---|
-| 基本面研究组 | 估值、盈利能力、成长、现金流、财务质量与资产负债结构 |
-| 预期与事件研究组 | 财报、业绩预告、业绩快报、预期变化和事件后漂移 |
-| 市场行为与交易结构研究组 | 动量、反转、波动、成交量、换手、流动性和交易成本 |
-| 另类信息研究组 | 新闻、研报、关注度、资金流、龙虎榜和其他辅助信息 |
-| 宏观状态研究组 | 利率、指数状态、风险偏好、市场波动和流动性环境 |
-| 组合增量研究组 | 因子相关性、残差 Alpha、组合缺口、增量价值和因子衰减 |
-
-系统根据问题选择一个到多个研究组；每组拥有独立上下文、工具视图、预算和产物空间。
-
-## 从问题到答案
 
 <p align="center">
-  <img src="frontend/public/brand/alphaforge-research-flow-v1.png" alt="AlphaForge 从研究问题到专业研究报告的多智能体协作流程" width="100%"/>
+  <a href="#why-alphaforge">Why AlphaForge</a> ·
+  <a href="#how-it-works">Workflow</a> ·
+  <a href="#six-specialist-desks">Research Desks</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-一次合法研究可以得到明确支持、条件性支持、否定结论、部分研究结果或具体的数据需求。每种结果都保留已完成的研究过程和下一步行动。
+---
 
-## 适合研究的问题
+AlphaForge turns a natural-language alpha question into a bounded, replayable research campaign. A coordinated team of specialist agents explores hypotheses, builds formulas, requests experiments, challenges weak evidence, and compiles an answer-first research report.
 
-```text
-挖掘 50 日动量的成交量确认、波动调整和流动性过滤变体。
+The core design principle is simple:
 
-ROE、经营现金流和估值组合能否预测未来 20 日收益？
+> **Agents explore. Deterministic evidence decides.**
 
-财报公告后的价格反应是延续还是反转？
+The Vibe-Trading runtime provides the operating shell—agent loops, tools, swarms, and orchestration—while AlphaForge adds the research contract: semantic formula review, isolated execution, frozen-data evidence, provenance, and explicit authority boundaries.
 
-高低 Shibor 状态下，哪些 Alpha 更稳定？
+> [!IMPORTANT]
+> AlphaForge is a research system. It does not place orders, control brokerage accounts, manage capital, or provide financial advice. Dynamic or unpinned data is treated as auxiliary until it passes the deterministic evidence path.
 
-寻找与现有动量和价值因子低相关的新增 Alpha。
+## One question. One research campaign.
 
-某个因子近期为什么衰减，应该修订、缩减还是继续观察？
-```
+~~~powershell
+alphaforge research "Can earnings-revision breadth predict 20-day excess returns?" --label-horizon 20 --print-report
+~~~
 
-更多可直接使用的问题见 [研究问题示例](examples/questions.md)。
+<div align="center">
 
-## 快速开始
+**Question** → **Plan** → **Parallel specialist research** → **Review** → **Sandbox experiment** → **Evidence** → **Answer**
 
-### 1. 安装
+</div>
 
-```powershell
+The result is more than a chat transcript. AlphaForge produces a research answer, evidence cards, experiment artifacts, coverage and failure disclosures, factor provenance, and replay metadata.
+
+## Why AlphaForge
+
+<table>
+  <tr>
+    <td width="33%"><strong>Autonomous exploration</strong><br />The system decomposes a question, assigns specialists, follows evidence, and revises weak hypotheses.</td>
+    <td width="33%"><strong>Six specialist desks</strong><br />Fundamentals, events, market structure, alternative data, macro regimes, and meta-alpha work in parallel.</td>
+    <td width="33%"><strong>Formula understanding</strong><br />AST, unit, domain, timing, and horizon checks evaluate what a formula means—not only whether it parses.</td>
+  </tr>
+  <tr>
+    <td><strong>Isolated experiments</strong><br />Reviewed code runs in a pinned, no-network sandbox against controlled datasets.</td>
+    <td><strong>Evidence before confidence</strong><br />Deterministic services compute metrics, provenance, coverage, and status labels.</td>
+    <td><strong>Answer-first reporting</strong><br />Every conclusion exposes its support, limits, failed branches, and reproducibility path.</td>
+  </tr>
+</table>
+
+### What a trustworthy answer contains
+
+| Layer | What AlphaForge records |
+| --- | --- |
+| Conclusion | Direct answer, confidence, applicable horizon, and decision boundary |
+| Evidence | Metric values, baselines, robustness checks, and evidence status |
+| Coverage | Symbols, dates, universe, missingness, and excluded observations |
+| Provenance | Dataset fingerprint, formula identity, runtime, seed, and artifact paths |
+| Failure disclosure | Rejected formulas, unavailable data, weak branches, and unresolved risks |
+| Replay | Stable inputs and commands required to reproduce the accepted result |
+
+## How it works
+
+~~~mermaid
+flowchart LR
+    Q["Research question"] --> P["Campaign planner"]
+    P --> S["Specialist desks"]
+    S --> G["Review gateway"]
+    G --> X["Pinned no-network sandbox"]
+    X --> E["Deterministic evidence service"]
+    E --> A["Answer & report compiler"]
+    E -. "revise or reject" .-> S
+
+    subgraph DESKS["Parallel research"]
+      F["Fundamentals"]
+      V["Expectations & events"]
+      M["Market structure"]
+      D["Alternative data"]
+      R["Macro regime"]
+      T["Meta-alpha"]
+    end
+
+    S --- DESKS
+~~~
+
+### Authority by design
+
+| Component | May do | May not do |
+| --- | --- | --- |
+| AgentLoop / Swarm | Plan, investigate, call registered tools, debate, and propose experiments | Declare an unverified result official |
+| Review gateway | Inspect formula semantics, timing, tool policy, and experiment intent | Manufacture missing evidence |
+| Sandbox | Run approved research code against mounted data | Access the network or escape the declared workspace |
+| Evidence service | Compute official metrics, fingerprints, coverage, and status | Rewrite conclusions to please an agent |
+| Report compiler | Bind claims to evidence and disclose limitations | Hide failed or blocked branches |
+
+This separation lets AlphaForge preserve the creativity of an agent system without granting language models financial or evidentiary authority.
+
+## Six specialist desks
+
+| Desk | Core questions | Typical outputs |
+| --- | --- | --- |
+| **Fundamental Research** | What does the company earn, own, owe, and reinvest? | Profitability, quality, valuation, balance-sheet factors |
+| **Expectations & Events** | What changed relative to expectations, and when? | Revisions, surprises, event windows, catalyst hypotheses |
+| **Market Structure** | How do liquidity, crowding, and trading mechanics shape the signal? | Turnover, impact, microstructure, tradability diagnostics |
+| **Alternative Data** | Can non-traditional observations add timely information? | Data-quality notes, feature proposals, availability boundaries |
+| **Macro & Regime** | When should the signal strengthen, weaken, or invert? | Regime labels, conditional results, macro sensitivity |
+| **Meta-Alpha** | Is the claimed edge robust, distinct, and reproducible? | Leakage review, ablations, correlation, robustness, evidence audit |
+
+Each desk has its own identity and method, but all accepted claims must converge on the same evidence contract.
+
+## Product surfaces
+
+| Surface | Purpose |
+| --- | --- |
+| **Research Workspace** | Launch a question, watch desk activity, inspect review decisions, and track campaign progress |
+| **Results & Reports** | Read the direct answer first, then drill into evidence, limitations, and artifacts |
+| **Evidence Explorer** | Inspect official/auxiliary/blocked evidence, dataset fingerprints, and replay metadata |
+| **Factor Library** | Compare formula semantics, quality, lineage, and historical experiment results |
+| **CLI & API** | Automate campaigns, run reproducible demos, and integrate external research workflows |
+
+## Quick start
+
+### 1. Run the deterministic offline demo
+
+No model key or market-data credential is required.
+
+~~~powershell
 git clone https://github.com/xxxhhbb/AlphaForge.git
 Set-Location AlphaForge
 
@@ -110,124 +157,133 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
-```
 
-### 2. 运行离线演示
-
-```powershell
 alphaforge demo --offline --seed 7
-```
+~~~
 
-离线演示使用仓库内的小型冻结数据，不需要模型密钥。
+On macOS or Linux, activate the environment with <code>source .venv/bin/activate</code>.
 
-### 3. 启动本地研究服务
+The demo writes a reproducible campaign under <code>agent/runs/</code>. Start with:
 
-```powershell
+- <code>report/research_answer.md</code> — the direct research answer;
+- <code>report/research_report.md</code> — the full campaign report;
+- <code>evidence/</code> and <code>experiments/</code> — accepted evidence and replayable artifacts.
+
+### 2. Launch the web product
+
+~~~powershell
 Set-Location frontend
 npm ci
 npm run build
 Set-Location ..
 
 alphaforge serve --host 127.0.0.1 --port 8000
-```
+~~~
 
-打开 <http://127.0.0.1:8000>。
+Open <http://127.0.0.1:8000>. The default bind is loopback-only.
 
-### 4. 启用真实研究模型
+### 3. Connect a model provider and run a real campaign
 
-```powershell
+~~~powershell
 Copy-Item agent\.env.example agent\.env
-```
+# Add the provider and data settings described in docs/alphaforge/QUICKSTART.md
 
-在本机 `agent/.env` 配置兼容的模型 Provider，然后运行：
+alphaforge research "Which quality signals remain robust after sector neutralization?" --label-horizon 20 --print-report
+~~~
 
-```powershell
-alphaforge research "成交量确认能否增强 50 日动量，并预测未来 20 日收益？" `
-  --label-horizon 20 `
-  --print-report
-```
+For Docker, data mounting, provider configuration, and the inherited full-stack runtime, see the [Docker guide](docs/alphaforge/DOCKER.md) and [Quick Start](docs/alphaforge/QUICKSTART.md).
 
-配置文件、密钥和研究产物默认不会进入 Git。
+<details>
+<summary><strong>Useful CLI paths</strong></summary>
 
-## 研究报告包含什么
+~~~text
+alphaforge demo       # deterministic offline campaign
+alphaforge research   # autonomous research campaign
+alphaforge serve      # API + built frontend
+alphaforge version    # version and build information
+~~~
 
-每份报告围绕用户问题组织，包含：
+Explore options with <code>alphaforge &lt;command&gt; --help</code>. Example questions are available in [examples/questions.md](examples/questions.md), and a representative output is in [examples/sample-report.md](examples/sample-report.md).
+</details>
 
-- 一句话机器结论；
-- 实际测试了什么；
-- 每个专业研究组的假设与实验路线；
-- 候选定义和研究代码摘要；
-- 数据范围、覆盖率和时间语义；
-- 成本后表现、换手、稳定性和增量性；
-- 支持证据、反对证据和分支冲突；
-- 对原问题的逐项回答；
-- 下一项最有价值的实验。
+## Repository map
 
-示例见 [客户研究报告](examples/sample-report.md)。
+~~~text
+AlphaForge/
+├── agent/
+│   ├── alphaforge/              # research kernel, contracts, evidence, reporting
+│   ├── vibe_trading/            # inherited agent runtime and compatibility layer
+│   ├── alphaforge_cli.py        # CLI entrypoint
+│   └── alphaforge_api_server.py # product API and frontend serving
+├── frontend/                    # React 19 research workspace
+├── docs/alphaforge/             # user, architecture, API, trust, and frontend specs
+├── examples/                    # research questions and sample report
+├── agent/tests/                 # product, contract, harness, and regression tests
+├── Dockerfile
+├── docker-compose.yml
+└── pyproject.toml
+~~~
 
-## 可信研究架构
+## Documentation
 
-AlphaForge 将开放式研究能力和确定性证据能力组合在同一条产品路径中：
+| Goal | Start here |
+| --- | --- |
+| Install and run | [Quick Start](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [Troubleshooting](docs/alphaforge/TROUBLESHOOTING.md) |
+| Use the product | [User Guide](docs/alphaforge/USER_GUIDE.md) · [Example Questions](examples/questions.md) · [Sample Report](examples/sample-report.md) |
+| Understand the system | [Architecture](docs/alphaforge/ARCHITECTURE.md) · [API Reference](docs/alphaforge/API_REFERENCE.md) · [Configuration](docs/alphaforge/CONFIGURATION.md) |
+| Evaluate trust and scope | [Current Status](docs/alphaforge/CURRENT_STATUS.md) · [Security & Authority](docs/alphaforge/SECURITY_AND_AUTHORITY.md) · [Formula Quality](docs/alphaforge/FORMULA_QUALITY_AND_REVISION.md) |
+| Understand research answers | [Research Answer V3](docs/alphaforge/RESEARCH_ANSWER_V3.md) · [Harness Report](docs/alphaforge/RESEARCH_ANSWER_HARNESS_REPORT.md) |
+| Build the frontend with AI | [Frontend Product Requirements](docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md) · [Frontend AI Prompt](docs/alphaforge/FRONTEND_AI_PROMPT.md) |
+| Contribute safely | [Contributing](CONTRIBUTING.md) · [Agent Contributor Guide](AGENT_CONTRIBUTOR_GUIDE.md) |
 
-| 层 | 职责 |
-|---|---|
-| Research Agent | 规划、调查、提出候选、编写实验和解释结果 |
-| Research Toolbox | 行情、财务、事件、宏观、资料和因子库等只读研究工具 |
-| Review Gateway | 研究完整性审查、字段闭包、静态安全与权限检查 |
-| Research Sandbox | 固定资源、无网络、冻结数据上的隔离实验运行 |
-| Evidence Service | 独立计算机器指标、成本、稳定性、增量性和统计证据 |
-| Report Composer | 将研究过程和机器事实组织成客户可读中文报告 |
+## Development and verification
 
-完整设计见 [架构文档](docs/alphaforge/ARCHITECTURE.md) 和 [安全与权限](docs/alphaforge/SECURITY_AND_AUTHORITY.md)。
-
-## 项目结构
-
-```text
-agent/
-  alphaforge_cli.py             # AlphaForge 公开命令入口
-  alphaforge_api_server.py      # 本地 Research OS 与 UI 服务
-  src/agent/                    # 有界研究 AgentLoop
-  src/swarm/                    # 多研究组并行与依赖调度
-  src/tools/                    # 数据和资料工具
-  src/veriquant/                # 冻结数据、Evidence、报告与可信研究内核
-  tests/veriquant/              # 产品、证据、PIT、安全和回放测试
-
-frontend/                       # AlphaForge 中文研究界面
-docs/alphaforge/                # 架构、配置、API、安全和开发文档
-examples/                       # 研究问题与客户报告示例
-```
-
-## 开发与测试
-
-```powershell
-python scripts\check_alphaforge_docs.py
-
-python -m pytest -q -p no:cacheprovider --confcutdir=agent/tests/veriquant `
-  agent/tests/veriquant/research_answer `
-  agent/tests/veriquant/agent_research_product
+~~~powershell
+python -m pytest -q
+python scripts/check_alphaforge_docs.py
 
 Set-Location frontend
-npm run test:run
+npm ci
+npm run lint
 npm run build
-```
+~~~
 
-贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [SECURITY.md](SECURITY.md)。
+Targeted harnesses cover research-answer correctness, product integration, formula semantics, status labels, replayability, and documentation links. New behavior should include a representative question, an explicit acceptance criterion, and a stable failure mode.
+
+## Current maturity
+
+AlphaForge is an active research product, not a production trading platform.
+
+- The deterministic offline path, CLI, API, built frontend, report pipeline, and six-desk research contract are implemented.
+- Official evidence requires pinned inputs and the controlled evidence path.
+- Dynamic tools and external feeds remain auxiliary unless their data is frozen, time-aligned, and reproducible.
+- Live execution, brokerage, accounts, order routing, portfolio mandates, and financial-advice workflows are intentionally out of scope.
+
+See [Current Status](docs/alphaforge/CURRENT_STATUS.md) for the latest capability matrix and known gaps.
 
 ## Roadmap
 
-- 更丰富的 A 股数据冻结与双时态研究面板；
-- 更强的事件研究、状态比较和组合增量实验；
-- 可恢复的长时多研究组任务；
-- 研究报告可视化与共享；
-- 因子注册、衰减诊断和持续研究；
-- 更完整的离线部署与可复现发布包。
+- Improve answer quality, report hierarchy, and research-result visualization.
+- Expand desk-specific tools while preserving a shared evidence contract.
+- Add richer time-aligned datasets and provider adapters.
+- Strengthen cross-factor comparison, regime analysis, and experiment replay.
+- Keep frontend, API, CLI, and reports aligned through product-level harnesses.
 
-详细路线见 [AlphaForge Roadmap](docs/alphaforge/ROADMAP.md)。
+## Contributing
 
-## 致谢
+We welcome work on research workflows, evidence quality, specialist desks, data adapters, formula semantics, reporting, and the frontend experience. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change. AI contributors should also follow [AGENT_CONTRIBUTOR_GUIDE.md](AGENT_CONTRIBUTOR_GUIDE.md).
 
-感谢 Vibe-Trading、Qlib 及开源量化与智能体社区提供的优秀基础设施与启发。
+## Acknowledgements
 
-## License
+AlphaForge builds on and learns from the open-source quantitative-research and agent ecosystems, including [Vibe-Trading](https://github.com/HKUDS/Vibe-Trading), [Qlib](https://github.com/microsoft/qlib), and [RD-Agent](https://github.com/microsoft/RD-Agent). Their inclusion here is an architectural acknowledgement, not an endorsement of AlphaForge.
 
-[MIT License](LICENSE)。第三方代码、数据接口和因子定义的归属与许可见 [NOTICE](NOTICE) 及相关目录说明。
+## License and disclaimer
+
+Released under the [MIT License](LICENSE).
+
+This repository is for research and education only. Outputs may be incomplete, stale, biased, or wrong. Nothing in AlphaForge constitutes investment advice, a recommendation, an offer, or an instruction to trade. You remain responsible for data rights, model-provider terms, validation, risk controls, and every real-world decision.
+
+<p align="center">
+  <strong>AlphaForge</strong><br />
+  Many hypotheses. One evidence contract. A clearer answer.
+</p>
