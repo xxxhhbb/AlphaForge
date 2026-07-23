@@ -191,7 +191,7 @@ Explore options with <code>alphaforge &lt;command&gt; --help</code>. Example que
 | Goal | Start here |
 | --- | --- |
 | Install and run | [Quick Start](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [Troubleshooting](docs/alphaforge/TROUBLESHOOTING.md) |
-| Use the product | [User Guide](docs/alphaforge/USER_GUIDE.md) · [Example Questions](examples/questions.md) · [Sample Report](examples/sample-report.md) |
+
 
 ## Contributing
 
