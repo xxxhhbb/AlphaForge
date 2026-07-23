@@ -10,7 +10,6 @@ from .models import Phase, SCHEMA_VERSION
 def _check(phase: Phase, repo: Path) -> tuple[str, dict[str, object]]:
     if phase is Phase.DISCOVER:
         required = (
-            "AGENT_CONTRIBUTOR_GUIDE.md",
             ".autobuild/veriquant/BUILD_CONSTITUTION.md",
             ".autobuild/veriquant/state.json",
             "docs/veriquant/QLIB_EXPRESSION_INTEGRATION_REPORT.md",

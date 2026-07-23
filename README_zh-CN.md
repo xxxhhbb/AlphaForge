@@ -39,7 +39,6 @@ AlphaForge（千因研究院）把自然语言提出的 Alpha 问题，转化为
 
 > **智能体负责探索，确定性证据负责裁决。**
 
-
 > [!IMPORTANT]
 > AlphaForge 是研究系统，不下单、不接管券商账户、不管理资金，也不提供投资建议。动态或未固定的数据在通过确定性证据链之前，只能作为辅助信息。
 
@@ -172,7 +171,7 @@ Copy-Item agent\.env.example agent\.env
 alphaforge research "哪些质量因子在行业中性化后仍然稳健？" --label-horizon 20 --print-report
 ~~~
 
-Docker、数据挂载、模型供应商配置和继承的完整运行栈，请阅读 [Docker 指南](docs/alphaforge/DOCKER.md) 与 [快速开始](docs/alphaforge/QUICKSTART.md)。
+Docker、数据挂载、模型供应商配置和本地部署，请阅读 [Docker 指南](docs/alphaforge/DOCKER.md) 与 [快速开始](docs/alphaforge/QUICKSTART.md)。
 
 <details>
 <summary><strong>常用 CLI 入口</strong></summary>
@@ -187,76 +186,20 @@ alphaforge version    # 版本与构建信息
 使用 <code>alphaforge &lt;command&gt; --help</code> 查看完整参数。可直接复用的研究问题位于 [examples/questions.md](examples/questions.md)，代表性输出位于 [examples/sample-report.md](examples/sample-report.md)。
 </details>
 
-## 项目结构
-
-~~~text
-AlphaForge/
-├── agent/
-│   ├── alphaforge/              # 研究内核、契约、证据与报告
-│   ├── vibe_trading/            # 继承的智能体运行时与兼容层
-│   ├── alphaforge_cli.py        # CLI 入口
-│   └── alphaforge_api_server.py # 产品 API 与前端服务
-├── frontend/                    # React 19 研究工作台
-├── docs/alphaforge/             # 用户、架构、API、可信边界与前端规格
-├── examples/                    # 示例问题与示例报告
-├── agent/tests/                 # 产品、契约、Harness 与回归测试
-├── Dockerfile
-├── docker-compose.yml
-└── pyproject.toml
-~~~
-
 ## 文档地图
 
 | 目标 | 从这里开始 |
 | --- | --- |
 | 安装与运行 | [快速开始](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [故障排查](docs/alphaforge/TROUBLESHOOTING.md) |
 | 使用产品 | [用户指南](docs/alphaforge/USER_GUIDE.md) · [示例问题](examples/questions.md) · [示例报告](examples/sample-report.md) |
-| 理解系统 | [系统架构](docs/alphaforge/ARCHITECTURE.md) · [API 参考](docs/alphaforge/API_REFERENCE.md) · [配置指南](docs/alphaforge/CONFIGURATION.md) |
-| 判断可信度与边界 | [当前状态](docs/alphaforge/CURRENT_STATUS.md) · [安全与权限](docs/alphaforge/SECURITY_AND_AUTHORITY.md) · [公式质量](docs/alphaforge/FORMULA_QUALITY_AND_REVISION.md) |
-| 理解研究答案 | [Research Answer V3](docs/alphaforge/RESEARCH_ANSWER_V3.md) · [Harness 报告](docs/alphaforge/RESEARCH_ANSWER_HARNESS_REPORT.md) |
-| 让 AI 开发前端 | [前端产品需求](docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md) · [前端 AI Prompt](docs/alphaforge/FRONTEND_AI_PROMPT.md) |
-| 安全参与开发 | [贡献指南](CONTRIBUTING.md) · [AI Agent 贡献指南](AGENT_CONTRIBUTOR_GUIDE.md) |
-
-## 开发与验证
-
-~~~powershell
-python -m pytest -q
-python scripts/check_alphaforge_docs.py
-
-Set-Location frontend
-npm ci
-npm run lint
-npm run build
-~~~
-
-专项 Harness 覆盖研究答案正确性、产品集成、公式语义、证据状态、可回放性和文档链接。新增能力应同时提供一个代表性问题、一套明确验收标准和一个稳定失败模式。
-
-## 当前成熟度
-
-AlphaForge 是持续开发中的研究产品，不是生产交易平台。
-
-- 确定性离线路径、CLI、API、已构建前端、报告链路和六组研究契约已经实现。
-- 正式证据必须使用固定输入并通过受控证据链。
-- 动态工具和外部数据源在完成数据冻结、时序对齐与复现验证前只能作为辅助信息。
-- 实盘执行、券商账户、订单路由、组合授权和投资建议流程被明确排除在范围之外。
-
-最新能力矩阵与已知缺口请查看 [当前状态](docs/alphaforge/CURRENT_STATUS.md)。
-
-## 路线图
-
-- 持续提高答案质量、报告层级和研究结果可视化。
-- 扩展研究组专属工具，同时维护统一证据契约。
-- 接入更丰富、严格时序对齐的数据集和供应商适配器。
-- 加强跨因子比较、市场状态分析与实验回放。
-- 用产品级 Harness 保持前端、API、CLI 与报告一致。
 
 ## 参与贡献
 
-欢迎参与研究工作流、证据质量、专业研究组、数据适配器、公式语义、报告和前端体验的建设。提交修改前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；AI 开发者还应遵循 [AGENT_CONTRIBUTOR_GUIDE.md](AGENT_CONTRIBUTOR_GUIDE.md)。
+欢迎提交边界清晰的 Issue 与 Pull Request。参与前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 致谢
 
-AlphaForge 构建并学习于开源量化研究与智能体生态，包括 [Vibe-Trading](https://github.com/HKUDS/Vibe-Trading)、[Qlib](https://github.com/microsoft/qlib) 和 [RD-Agent](https://github.com/microsoft/RD-Agent)。这里的列出仅表示架构与社区层面的致谢，不代表上述项目对 AlphaForge 的背书。
+感谢 Vibe-Trading、Qlib、RD-Agent 以及开源量化研究与智能体社区。
 
 ## 许可证与免责声明
 

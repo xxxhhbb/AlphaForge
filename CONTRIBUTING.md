@@ -1,139 +1,43 @@
 # Contributing to AlphaForge
 
-AlphaForge（千因研究院）是可信的自主多智能体 Alpha 研究平台。欢迎研究运行时、数据、评估、报告、文档、测试和产品体验贡献。
+感谢你帮助改进 AlphaForge。提交前请先搜索现有 Issue，确保问题尚未被报告或正在处理。
 
-提交前请先读：
+## 提交 Issue
 
-- [项目 README](README.md)
-- [AlphaForge 文档中心](docs/alphaforge/README.md)
-- [架构](docs/alphaforge/ARCHITECTURE.md)
-- [安全与权限](docs/alphaforge/SECURITY_AND_AUTHORITY.md)
-- [当前状态](docs/alphaforge/CURRENT_STATUS.md)
-- AI/自动化贡献还要读 [AGENT_CONTRIBUTOR_GUIDE.md](AGENT_CONTRIBUTOR_GUIDE.md)
+请说明：
 
-## 产品命名
+- 你希望完成的研究任务；
+- 实际结果与预期结果；
+- 可复现步骤；
+- 操作系统和 Python/Docker 版本；
+- 已脱敏的错误信息或截图。
 
-- 对外产品统一使用 `AlphaForge（千因研究院）`；
-- `VeriQuant` 是内部确定性研究内核；
-- 公共命令、文档、截图和新接口统一使用 `alphaforge`；
-- 内部兼容 import 和环境变量应通过独立迁移逐步收敛，避免破坏已有研究产物。
+不要提交模型密钥、数据服务 Token、私有数据、账户信息或完整环境文件。
 
-## 开发环境
+## 提交 Pull Request
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-
-Set-Location frontend
-npm ci
-npm run build
-```
-
-完整说明见 [开发与测试](docs/alphaforge/DEVELOPMENT.md)。
-
-## 工作流
-
-1. 先创建或认领一个边界清晰的 Issue；
-2. 从 `main` 创建短生命周期分支；
-3. 只修改实现该纵向切片所需文件；
-4. 添加正向和负向测试；
-5. 更新用户/AI 文档；
-6. 运行最窄相关测试和必要回归；
-7. 使用 DCO sign-off 提交；
-8. 打开 PR，说明目标、范围、风险、测试、截图和回滚。
+1. 从 `main` 创建短生命周期分支；
+2. 只修改实现目标所需的文件；
+3. 为行为变化增加测试；
+4. 更新受影响的用户说明；
+5. 报告实际运行的测试；
+6. 使用 DCO sign-off 提交。
 
 ```powershell
-git switch -c feat/frontend-research-flow
-git commit -s -m "feat(frontend): add explicit plan confirmation"
-git push -u origin feat/frontend-research-flow
+git switch -c fix/short-description
+git commit -s -m "fix: describe the change"
 ```
 
-## DCO
+## 本地安装
 
-所有社区提交必须包含 `Signed-off-by:`：
+按照 [快速开始](docs/alphaforge/QUICKSTART.md) 创建环境。常用检查：
 
 ```powershell
-git commit -s -m "fix(report): preserve auxiliary evidence label"
+python scripts\check_alphaforge_docs.py
+python -m pytest -q
 ```
 
-这表示你有权按项目许可证提交该贡献。不要添加 AI 助手的 `Co-Authored-By` 或其他自动署名 trailer；DCO 是所需 trailer。
-
-## 代码风格
-
-### Python
-
-- Python 3.11+；
-- 公共函数/方法添加类型；
-- Google-style docstring；
-- Ruff 配置见 `pyproject.toml`；
-- 避免硬编码路径、密钥和 Provider；
-- 文件尽量低于 400 行，800 行硬上限；
-- 删除废弃代码，不长期注释。
-
-### TypeScript/React
-
-- TypeScript strict 合同和运行时响应校验；
-- 函数组件与清晰数据所有权；
-- 后端是状态事实源；
-- 可访问语义、键盘和响应式是验收项；
-- 不渲染未知 JSON，不使用 `dangerouslySetInnerHTML`；
-- API 失败不能回退为伪成功 fixture；
-- 视觉遵循 [前端产品需求](docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md)。
-
-## 研究与金融权限
-
-Research Agent 可以规划、调查、写 DRAFT 实验和解释公开结果。它不能计算官方指标、批准自己、读取 sealed、绕过 Risk、下单或修改账本。
-
-涉及以下区域的 PR 属于高风险：
-
-- PIT/availability；
-- Research Sandbox；
-- Evidence/Promotion；
-- Tool 白名单；
-- Risk/portfolio/execution/ledger；
-- Broker/OAuth/Secret；
-- API 写权限；
-- sealed 投影。
-
-高风险 PR 必须有失败关闭测试、权限说明和回滚方案。常规 PR 验证不得访问真实资金或下单。
-
-## 因子贡献
-
-修改 `agent/src/factors/zoo/**/*.py` 时至少验证：
-
-```powershell
-pytest agent/tests/factors/test_alpha_purity.py agent/tests/factors/test_lookahead.py -q
-```
-
-要求：
-
-- `__alpha_meta__` 满足 registry 合同；
-- `compute(panel)` 保持形状、warmup NaN 和有限输出；
-- 无负 shift/未来泄漏；
-- 只使用 allowlist import；
-- LaTeX 与实现一致；
-- 更新相应 `LICENSE.md`/NOTICE；
-- 适用的 Apache-2.0 来源保留 commit/path/版权归属。
-
-## 测试
-
-通用后端：
-
-```powershell
-pytest --ignore=agent/tests/e2e_backtest --ignore=agent/tests/test_e2e_harness_v2.py --tb=short -q
-```
-
-AlphaForge V3 窄集：
-
-```powershell
-python -m pytest -q -p no:cacheprovider --confcutdir=agent/tests/veriquant `
-  agent/tests/veriquant/research_os_v3 `
-  agent/tests/veriquant/agent_research_product
-```
-
-前端：
+前端发生变化时同时运行：
 
 ```powershell
 Set-Location frontend
@@ -141,35 +45,12 @@ npm run test:run
 npm run build
 ```
 
-文档：
+## 安全边界
 
-```powershell
-python scripts\check_alphaforge_docs.py
-```
+涉及研究代码执行、数据时间语义、Evidence、模型工具权限、密钥或本地服务暴露的修改，必须包含失败关闭测试。研究功能不得引入真实账户或真实订单入口。
 
-报告精确结果，区分 passed、failed、skipped、not run 和 environment unavailable。
+安全问题不要公开提交 Issue，请按照 [安全策略](SECURITY.md) 私下报告。
 
-## PR 必填内容
+## 许可证
 
-- Summary：用户/系统结果；
-- Why：问题与证据；
-- Scope / Non-goals；
-- Architecture/authority impact；
-- Tests：精确命令和结果；
-- UI：桌面/移动截图；
-- Data/model/network impact；
-- Security：secret/sealed/sandbox/trading；
-- Rollback；
-- Known limitations。
-
-## 文档
-
-- 用户可见行为更新根 README 和 `docs/alphaforge/`；
-- API 变化更新 `API_REFERENCE.md`、前端类型和合同测试；
-- 前端变化更新需求或当前状态；
-- 已实现与路线图分开；
-- 不提交 `.autobuild`、真实报告数据或密钥。
-
-## 许可与归属
-
-保留 `LICENSE`、`NOTICE`、因子目录许可和所有第三方归属。新增依赖或移植研究实现时，必须记录来源、许可证和适用的版权声明。
+贡献代码须与仓库许可证兼容，并保留 `LICENSE`、`NOTICE` 及适用的第三方归属。

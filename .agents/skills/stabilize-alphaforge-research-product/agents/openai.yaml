@@ -1,4 +1,0 @@
-interface:
-  display_name: "AlphaForge Product Stabilization"
-  short_description: "Converge AlphaForge with free research agents and mechanical gates"
-  default_prompt: "Use $stabilize-alphaforge-research-product to converge AlphaForge to one reproducible research path, reuse Vibe-Trading infrastructure, and run the representative acceptance harness."

@@ -10,21 +10,9 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 DOC_ROOT = ROOT / "docs" / "alphaforge"
 REQUIRED = {
-    "README.md",
-    "PRODUCT_VISION.md",
-    "ARCHITECTURE.md",
     "QUICKSTART.md",
     "DOCKER.md",
-    "CONFIGURATION.md",
     "USER_GUIDE.md",
-    "API_REFERENCE.md",
-    "SECURITY_AND_AUTHORITY.md",
-    "DEVELOPMENT.md",
-    "GITHUB_COLLABORATION.md",
-    "FRONTEND_PRODUCT_REQUIREMENTS.md",
-    "FRONTEND_AI_PROMPT.md",
-    "CURRENT_STATUS.md",
-    "ROADMAP.md",
     "TROUBLESHOOTING.md",
 }
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -37,10 +25,8 @@ def markdown_files() -> list[Path]:
     files = [
         ROOT / "README.md",
         ROOT / "README_zh-CN.md",
-        ROOT / "README_en.md",
-        ROOT / "README_zh.md",
         ROOT / "CONTRIBUTING.md",
-        ROOT / "AGENT_CONTRIBUTOR_GUIDE.md",
+        ROOT / "SECURITY.md",
     ]
     files.extend(sorted(DOC_ROOT.glob("*.md")))
     return [path for path in files if path.exists()]

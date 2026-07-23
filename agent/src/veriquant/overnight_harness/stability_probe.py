@@ -41,7 +41,6 @@ def _direct_execution_hits(root: Path) -> tuple[str, ...]:
 def _check(phase: Phase, repo: Path) -> tuple[str, dict[str, object]]:
     if phase is Phase.DISCOVER:
         required = (
-            "AGENT_CONTRIBUTOR_GUIDE.md",
             ".autobuild/veriquant/BUILD_CONSTITUTION.md",
             ".autobuild/veriquant/state.json",
             "agent/alphaforge_api_server.py",

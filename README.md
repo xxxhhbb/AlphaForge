@@ -171,7 +171,7 @@ Copy-Item agent\.env.example agent\.env
 alphaforge research "Which quality signals remain robust after sector neutralization?" --label-horizon 20 --print-report
 ~~~
 
-For Docker, data mounting, provider configuration, and the inherited full-stack runtime, see the [Docker guide](docs/alphaforge/DOCKER.md) and [Quick Start](docs/alphaforge/QUICKSTART.md).
+For Docker, data mounting, provider configuration, and local deployment, see the [Docker guide](docs/alphaforge/DOCKER.md) and [Quick Start](docs/alphaforge/QUICKSTART.md).
 
 <details>
 <summary><strong>Useful CLI paths</strong></summary>
@@ -186,76 +186,20 @@ alphaforge version    # version and build information
 Explore options with <code>alphaforge &lt;command&gt; --help</code>. Example questions are available in [examples/questions.md](examples/questions.md), and a representative output is in [examples/sample-report.md](examples/sample-report.md).
 </details>
 
-## Repository map
-
-~~~text
-AlphaForge/
-├── agent/
-│   ├── alphaforge/              # research kernel, contracts, evidence, reporting
-│   ├── vibe_trading/            # inherited agent runtime and compatibility layer
-│   ├── alphaforge_cli.py        # CLI entrypoint
-│   └── alphaforge_api_server.py # product API and frontend serving
-├── frontend/                    # React 19 research workspace
-├── docs/alphaforge/             # user, architecture, API, trust, and frontend specs
-├── examples/                    # research questions and sample report
-├── agent/tests/                 # product, contract, harness, and regression tests
-├── Dockerfile
-├── docker-compose.yml
-└── pyproject.toml
-~~~
-
 ## Documentation
 
 | Goal | Start here |
 | --- | --- |
 | Install and run | [Quick Start](docs/alphaforge/QUICKSTART.md) · [Docker](docs/alphaforge/DOCKER.md) · [Troubleshooting](docs/alphaforge/TROUBLESHOOTING.md) |
 | Use the product | [User Guide](docs/alphaforge/USER_GUIDE.md) · [Example Questions](examples/questions.md) · [Sample Report](examples/sample-report.md) |
-| Understand the system | [Architecture](docs/alphaforge/ARCHITECTURE.md) · [API Reference](docs/alphaforge/API_REFERENCE.md) · [Configuration](docs/alphaforge/CONFIGURATION.md) |
-| Evaluate trust and scope | [Current Status](docs/alphaforge/CURRENT_STATUS.md) · [Security & Authority](docs/alphaforge/SECURITY_AND_AUTHORITY.md) · [Formula Quality](docs/alphaforge/FORMULA_QUALITY_AND_REVISION.md) |
-| Understand research answers | [Research Answer V3](docs/alphaforge/RESEARCH_ANSWER_V3.md) · [Harness Report](docs/alphaforge/RESEARCH_ANSWER_HARNESS_REPORT.md) |
-| Build the frontend with AI | [Frontend Product Requirements](docs/alphaforge/FRONTEND_PRODUCT_REQUIREMENTS.md) · [Frontend AI Prompt](docs/alphaforge/FRONTEND_AI_PROMPT.md) |
-| Contribute safely | [Contributing](CONTRIBUTING.md) · [Agent Contributor Guide](AGENT_CONTRIBUTOR_GUIDE.md) |
-
-## Development and verification
-
-~~~powershell
-python -m pytest -q
-python scripts/check_alphaforge_docs.py
-
-Set-Location frontend
-npm ci
-npm run lint
-npm run build
-~~~
-
-Targeted harnesses cover research-answer correctness, product integration, formula semantics, status labels, replayability, and documentation links. New behavior should include a representative question, an explicit acceptance criterion, and a stable failure mode.
-
-## Current maturity
-
-AlphaForge is an active research product, not a production trading platform.
-
-- The deterministic offline path, CLI, API, built frontend, report pipeline, and six-desk research contract are implemented.
-- Official evidence requires pinned inputs and the controlled evidence path.
-- Dynamic tools and external feeds remain auxiliary unless their data is frozen, time-aligned, and reproducible.
-- Live execution, brokerage, accounts, order routing, portfolio mandates, and financial-advice workflows are intentionally out of scope.
-
-See [Current Status](docs/alphaforge/CURRENT_STATUS.md) for the latest capability matrix and known gaps.
-
-## Roadmap
-
-- Improve answer quality, report hierarchy, and research-result visualization.
-- Expand desk-specific tools while preserving a shared evidence contract.
-- Add richer time-aligned datasets and provider adapters.
-- Strengthen cross-factor comparison, regime analysis, and experiment replay.
-- Keep frontend, API, CLI, and reports aligned through product-level harnesses.
 
 ## Contributing
 
-We welcome work on research workflows, evidence quality, specialist desks, data adapters, formula semantics, reporting, and the frontend experience. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change. AI contributors should also follow [AGENT_CONTRIBUTOR_GUIDE.md](AGENT_CONTRIBUTOR_GUIDE.md).
+We welcome focused issues and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
 
 ## Acknowledgements
 
-AlphaForge builds on and learns from the open-source quantitative-research and agent ecosystems, including [Vibe-Trading](https://github.com/HKUDS/Vibe-Trading), [Qlib](https://github.com/microsoft/qlib), and [RD-Agent](https://github.com/microsoft/RD-Agent). Their inclusion here is an architectural acknowledgement, not an endorsement of AlphaForge.
+Thanks to Vibe-Trading, Qlib, RD-Agent, and the open-source quantitative research and agent communities.
 
 ## License and disclaimer
 

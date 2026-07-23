@@ -1,15 +1,12 @@
 include LICENSE
 include NOTICE
 include README.md
-include README_zh.md
-include README_ja.md
-include README_ko.md
-include README_ar.md
+include README_zh-CN.md
 include pyproject.toml
 include Dockerfile
 include docker-compose.yml
 
-# Developer entry-point template
+# Local configuration template
 include agent/.env.example
 
 # Alpha Zoo factor metadata and per-zoo LICENSE / NOTICE files
