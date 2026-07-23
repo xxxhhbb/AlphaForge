@@ -74,18 +74,9 @@ AlphaForge 会自动完成：
 
 ## 从问题到答案
 
-```mermaid
-flowchart LR
-    Q["用户研究问题"] --> P["研究计划"]
-    P --> A["多专业研究组"]
-    A --> T["只读数据与资料工具"]
-    T --> X["多个实验候选"]
-    X --> G["安全审查网关"]
-    G --> S["隔离研究沙箱"]
-    S --> O["标准研究结果"]
-    O --> E["独立机器 Evidence"]
-    E --> R["专业中文报告"]
-```
+<p align="center">
+  <img src="frontend/public/brand/alphaforge-research-flow-v1.png" alt="AlphaForge 从研究问题到专业研究报告的多智能体协作流程" width="100%"/>
+</p>
 
 一次合法研究可以得到明确支持、条件性支持、否定结论、部分研究结果或具体的数据需求。每种结果都保留已完成的研究过程和下一步行动。
 
