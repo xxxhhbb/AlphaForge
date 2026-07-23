@@ -23,6 +23,7 @@ from ..agent_research_sandbox.evaluator import EvidenceAdmissionStatus
 from ..agent_research_sandbox.process_runner import ProcessRunStatus
 from ..agent_research_sandbox.review import ExperimentReviewGate
 from ..evidence import EvidenceCourt
+from ..formula_semantics import FormulaSemanticReviewer
 from ..research_toolbox.registry import BROAD_READONLY_RESEARCH_TOOLS
 from .contracts import (
     DraftSourceRepository,
@@ -56,6 +57,7 @@ class ResearchReviewGateway:
         evidence_evaluator: Any,
         artifact_writer: ArtifactWriter,
         review_advisor: ResearchReviewAdvisorProtocol | None = None,
+        formula_reviewer: FormulaSemanticReviewer | None = None,
     ) -> None:
         self.sources = source_repository
         self.review_gate = review_gate
@@ -64,6 +66,7 @@ class ResearchReviewGateway:
         self.evaluator = evidence_evaluator
         self.write_artifact = artifact_writer
         self.review_advisor = review_advisor
+        self.formula_reviewer = formula_reviewer or FormulaSemanticReviewer()
 
     def evaluate_draft(
         self, *, manifest, outcome, source_hash: str,
@@ -115,6 +118,38 @@ class ResearchReviewGateway:
                 review_hash=decision.artifact_hash,
                 review_feedback_codes=tuple(sorted({item.code.value for item in decision.findings})),
             )
+
+        semantic_arguments = getattr(self.binding, "formula_semantic_arguments", None)
+        formula_review = None
+        if callable(semantic_arguments):
+            try:
+                formula_review = self.formula_reviewer.review(
+                    source_text=source,
+                    **dict(semantic_arguments(proposer_id=outcome.specialist_id)),
+                )
+            except (TypeError, ValueError):
+                return _blocked(
+                    experiment_id, outcome.specialist_id, source_hash,
+                    ProductFailureCode.IDENTITY_BINDING_FAILED,
+                    review_hash=decision.artifact_hash,
+                )
+            self.write_artifact(
+                manifest.run_id,
+                f"experiments/{experiment_id}/formula_semantic_review.json",
+                formula_review.to_dict(include_hash=False),
+            )
+            if formula_review.blocked or formula_review.requires_revision:
+                return _result(
+                    experiment_id, outcome.specialist_id, source_hash,
+                    ProductExperimentStatus.NEGATIVE,
+                    ProductFailureCode.FORMULA_SEMANTIC_REVIEW_REQUIRED,
+                    review_hash=decision.artifact_hash,
+                    formula_review_hash=formula_review.artifact_hash,
+                    review_feedback_codes=tuple(sorted({
+                        item.code for item in formula_review.findings
+                        if item.severity.value in {"BLOCKING", "REVISION_REQUIRED"}
+                    })),
+                )
 
         try:
             process_request = self.binding.process_request(
@@ -294,6 +329,15 @@ class ResearchReviewGateway:
             status,
             failure,
             review_hash=decision.artifact_hash,
+            formula_review_hash=(
+                None if not callable(semantic_arguments) else formula_review.artifact_hash
+            ),
+            formula_advisory_codes=(
+                () if formula_review is None else tuple(sorted({
+                    item.code for item in formula_review.findings
+                    if item.severity.value == "ADVISORY"
+                }))
+            ),
             runner_receipt_hash=receipt.artifact_hash,
             evidence_result_hash=evidence.artifact_hash,
             official_evidence_hash=(
@@ -308,6 +352,7 @@ class ResearchReviewGateway:
             court_outcome=court_outcome,
             court_reason_codes=court_reason_codes,
             court_decision_hash=court_decision_hash,
+            output_kind=receipt.output_kind,
             review_feedback_codes=(
                 ("UNFROZEN_DYNAMIC_TOOL_INPUT",) if dynamic_tools else ()
             ),

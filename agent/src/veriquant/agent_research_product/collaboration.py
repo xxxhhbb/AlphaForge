@@ -21,12 +21,14 @@ class EvidenceContribution:
     evidence_hash: str
     court_outcome: str
     metrics: tuple[tuple[str, str], ...]
+    authority: str = "OFFICIAL_EVIDENCE"
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "specialist_id": self.specialist_id, "experiment_id": self.experiment_id,
             "evidence_hash": self.evidence_hash, "court_outcome": self.court_outcome,
             "metrics": [{"name": name, "display_value": value} for name, value in self.metrics],
+            "authority": self.authority,
         }
 
 
@@ -96,6 +98,85 @@ class EvidenceCollaborationAggregator:
             run_id=result.run_id, contributions=contributions,
             conflict_codes=tuple(sorted(conflicts)), aggregate_outcome=aggregate,
         )
+
+    def summarize_experiments(
+        self, *, run_id: str, experiments: tuple[ProductExperimentResult, ...]
+    ) -> EvidenceCollaborationResult:
+        """Summarize every available Evidence contribution for the product path.
+
+        Unlike the strict multi-specialist acceptance method above, this method
+        is defined for zero, one, or many candidates and preserves auxiliary
+        authority.  It does not promote or calculate financial metrics.
+        """
+
+        contributions = []
+        for item in experiments:
+            evidence_hash = item.official_evidence_hash or item.research_evidence_hash
+            outcome = item.court_outcome or item.research_verdict
+            metrics = item.official_metrics or item.research_metrics
+            if not evidence_hash or not outcome:
+                continue
+            contributions.append(EvidenceContribution(
+                specialist_id=item.specialist_id,
+                experiment_id=item.experiment_id,
+                evidence_hash=evidence_hash,
+                court_outcome=outcome,
+                metrics=tuple(sorted(metrics)),
+                authority=(
+                    "OFFICIAL_EVIDENCE"
+                    if item.official_evidence_hash is not None
+                    else "AUXILIARY_ONLY"
+                ),
+            ))
+        ordered = tuple(sorted(
+            contributions, key=lambda item: (item.specialist_id, item.experiment_id)
+        ))
+        conflicts = self._conflicts(ordered)
+        outcomes = {item.court_outcome for item in ordered}
+        positive = outcomes & {"VALIDATED_RESEARCH", "SUPPORTED", "CONDITIONALLY_SUPPORTED"}
+        negative = outcomes & {"REJECT", "REJECTED"}
+        if positive and negative:
+            aggregate = "REVISE"
+        elif positive:
+            aggregate = (
+                "VALIDATED_RESEARCH"
+                if outcomes <= {"VALIDATED_RESEARCH", "SUPPORTED"}
+                else "REVISE"
+            )
+        elif negative and outcomes <= {"REJECT", "REJECTED"}:
+            aggregate = "REJECT"
+        elif ordered:
+            aggregate = "REVISE"
+        else:
+            aggregate = "INSUFFICIENT_EVIDENCE"
+        return EvidenceCollaborationResult(
+            run_id=run_id,
+            contributions=ordered,
+            conflict_codes=conflicts,
+            aggregate_outcome=aggregate,
+        )
+
+    @staticmethod
+    def _conflicts(contributions: tuple[EvidenceContribution, ...]) -> tuple[str, ...]:
+        outcomes = {item.court_outcome for item in contributions}
+        conflicts: list[str] = []
+        if outcomes & {"VALIDATED_RESEARCH", "SUPPORTED", "CONDITIONALLY_SUPPORTED"} and outcomes & {"REJECT", "REJECTED"}:
+            conflicts.append("SPECIALIST_VERDICT_CONFLICT")
+        authorities = {item.authority for item in contributions}
+        if len(authorities) > 1:
+            conflicts.append("EVIDENCE_AUTHORITY_MIXED")
+        for name in sorted({name for item in contributions for name, _ in item.metrics}):
+            values = []
+            for item in contributions:
+                for metric_name, display in item.metrics:
+                    if metric_name == name:
+                        try:
+                            values.append(float(display))
+                        except ValueError:
+                            pass
+            if any(value > 0 for value in values) and any(value < 0 for value in values):
+                conflicts.append(f"METRIC_DIRECTION_CONFLICT:{name}")
+        return tuple(sorted(conflicts))
 
     @staticmethod
     def _contribution(item: ProductExperimentResult) -> EvidenceContribution:

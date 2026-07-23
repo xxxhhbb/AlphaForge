@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 import threading
 import time
+import traceback
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -159,6 +160,15 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
         recovering=bool(resume_sources),
     )
     report = Path(result.report_path).read_text(encoding="utf-8")
+    answer_path = Path(result.report_path).parent / "research_answer.json"
+    # Product v3 always emits this artifact.  Keep the terminal compatible
+    # with test doubles and archived pre-v3 receipts instead of turning an
+    # otherwise readable completed report into a terminal failure.
+    answer = (
+        json.loads(answer_path.read_text(encoding="utf-8"))
+        if answer_path.is_file()
+        else None
+    )
     payload = result.to_dict()
     payload["selected_specialists"] = list(specialists)
     payload["runtime"] = "VIBE_AGENT_LOOP_AGENT_RESEARCH_PRODUCT_V1"
@@ -170,6 +180,11 @@ def run(args: argparse.Namespace) -> tuple[int, dict[str, Any], str]:
         "max_symbols": max_symbols,
     }
     payload["recovered_from_existing_drafts"] = bool(resume_sources)
+    if answer is not None:
+        payload["answer_status"] = answer["answer_status"]
+        payload["research_verdict"] = answer["research_verdict"]
+        payload["direct_answer"] = answer["direct_answer"]
+        payload["answer_path"] = str(answer_path)
     return (0 if result.lifecycle in {"COMPLETED", "PARTIAL"} else 2), payload, report
 
 
@@ -281,11 +296,11 @@ def _run_with_progress(canary, *, run_root: Path, specialists: tuple[str, ...], 
 def _progress_loop(*, root: Path, specialists: tuple[str, ...], interval: float, stop: threading.Event, recovering: bool) -> None:
     action = "恢复已提交草案" if recovering else "启动真实模型研究"
     print(
-        f"[1/7] 研究计划已形成：{'、'.join(_SPECIALIST_ZH[item] for item in specialists)}",
+        f"[1/8] 研究计划已形成：{'、'.join(_SPECIALIST_ZH[item] for item in specialists)}",
         file=sys.stderr,
         flush=True,
     )
-    print(f"[2/7] 正在读取并校验冻结数据；随后{action}", file=sys.stderr, flush=True)
+    print(f"[2/8] 正在读取并校验冻结数据；随后{action}", file=sys.stderr, flush=True)
     seen: set[str] = set()
     while not stop.is_set():
         _emit_progress(root, seen)
@@ -295,7 +310,7 @@ def _progress_loop(*, root: Path, specialists: tuple[str, ...], interval: float,
 
 def _emit_progress(root: Path, seen: set[str]) -> None:
     for path in sorted(root.glob("research_runs/*/product_request.json")):
-        _emit_once(seen, "frozen-data-ready", "[2/7] 冻结数据与研究身份已校验，开始专业研究")
+        _emit_once(seen, "frozen-data-ready", "[2/8] 冻结数据与研究身份已校验，开始专业研究")
     for path in sorted(root.glob("agent_runs/*/specialists/*/llm_usage.json")):
         value = _safe_json(path)
         totals = value.get("totals") if isinstance(value.get("totals"), dict) else {}
@@ -305,28 +320,32 @@ def _emit_progress(root: Path, seen: set[str]) -> None:
             _emit_once(
                 seen,
                 f"llm:{specialist}:{calls}",
-                f"[3/7] {_SPECIALIST_ZH.get(specialist, specialist)}真实模型已完成 {calls} 次有界迭代",
+                f"[3/8] {_SPECIALIST_ZH.get(specialist, specialist)}真实模型已完成 {calls} 次有界迭代",
             )
     for path in sorted(root.glob("*/branches/*/outcome.json")):
         value = _safe_json(path)
         specialist = str((value.get("payload") or {}).get("specialist_id") or path.parent.name.removeprefix("task_"))
-        _emit_once(seen, f"outcome:{specialist}", f"[3/7] {_SPECIALIST_ZH.get(specialist, specialist)}已提交研究代码")
+        _emit_once(seen, f"outcome:{specialist}", f"[3/8] {_SPECIALIST_ZH.get(specialist, specialist)}已提交研究代码")
     for path in sorted(root.glob("research_runs/*/experiments/*/review.json")):
         value = _safe_json(path)
         status = str(value.get("status", "UNKNOWN"))
-        _emit_once(seen, f"review:{path.parent.name}:{status}", f"[4/7] {path.parent.name} 机械审查：{status}")
+        _emit_once(seen, f"review:{path.parent.name}:{status}", f"[4/8] {path.parent.name} 机械审查：{status}")
     for path in sorted(root.glob("research_runs/*/experiments/*/runner.json")):
         value = _safe_json(path)
         status = str(value.get("status", "UNKNOWN"))
         failure = str(value.get("failure_code") or "")
         suffix = f"（{failure}）" if failure else ""
-        _emit_once(seen, f"runner:{path.parent.name}:{status}:{failure}", f"[5/7] {path.parent.name} 隔离实验：{status}{suffix}")
+        _emit_once(seen, f"runner:{path.parent.name}:{status}:{failure}", f"[5/8] {path.parent.name} 隔离实验：{status}{suffix}")
     for path in sorted(root.glob("research_runs/*/experiments/*/evidence*.json")):
-        _emit_once(seen, f"evidence:{path}", f"[6/7] {path.parent.name} 已生成机器 Evidence")
+        _emit_once(seen, f"evidence:{path}", f"[6/8] {path.parent.name} 已生成机器 Evidence")
+    for path in sorted(root.glob("research_runs/*/research_answer.json")):
+        value = _safe_json(path)
+        status = str(value.get("answer_status", "UNKNOWN"))
+        _emit_once(seen, f"answer:{path}:{status}", f"[7/8] 已形成逐项研究答案：{status}")
     for path in sorted(root.glob("research_runs/*/product_result.json")):
         value = _safe_json(path)
         lifecycle = str(value.get("lifecycle", "UNKNOWN"))
-        _emit_once(seen, f"result:{path}:{lifecycle}", f"[7/7] 正式报告已生成：{lifecycle}")
+        _emit_once(seen, f"result:{path}:{lifecycle}", f"[8/8] 正式报告已生成：{lifecycle}")
 
 
 def _safe_json(path: Path) -> dict[str, Any]:
@@ -349,10 +368,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         code, payload, report = run(args)
     except Exception as exc:
+        frames = traceback.extract_tb(exc.__traceback__)
         payload = {
             "status": "FAILED",
             "failure_code": "AGENT_RESEARCH_PRODUCT_FAILED",
             "failure_type": type(exc).__name__,
+            "failure_frames": [
+                {
+                    "module": Path(frame.filename).name,
+                    "function": frame.name,
+                    "line": frame.lineno,
+                }
+                for frame in frames[-8:]
+            ],
         }
         print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
         return 2
@@ -364,6 +392,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"研究组：{'、'.join(payload['selected_specialists'])}")
         print(f"状态：{payload['lifecycle']}")
         print(f"实验：{len(payload['experiments'])}")
+        print(f"回答状态：{payload['answer_status']}")
+        print(f"最终答案：{payload['direct_answer']}")
+        print(f"答案产物：{payload['answer_path']}")
         print(f"报告：{payload['report_path']}")
         if args.print_report:
             print("\n" + report)

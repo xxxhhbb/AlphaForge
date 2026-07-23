@@ -55,6 +55,7 @@ from ..research_agent_runtime import (
 )
 from ..research_agent_runtime.real_llm import ConfiguredResearchLLMFactory
 from ..research_run_controller import ResearchRunLifecycle, ResearchRunManifest
+from ..research_answer.compiler import ResearchAnswerContractCompiler
 from ..research_toolbox import (
     ContentAddressedHandleStore,
     VIBE_READONLY_RESEARCH_TOOLS,
@@ -74,6 +75,7 @@ from .service import AgentResearchProductService, ContentAddressedDraftSourceRep
 
 
 _HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 _SOURCE_LABEL = "APPROVED_PROXY_DATA_VENDOR"
 _SCHEMA_VERSION = "alphaforge.agent-research-product-canary/v2"
 _AMENDMENT_AUTHORIZED_AT = datetime(2026, 7, 21, tzinfo=timezone.utc)
@@ -111,6 +113,12 @@ class ProductCanaryConfiguration:
     experiment_type: str = "CANDIDATE_EXPLORATION"
     expected_result_kind: str = "CANDIDATE_SET"
     task_plan_hash: str | None = None
+    # The original 8 MiB Docker IPC ceiling was sized for smoke fixtures and
+    # rejected the verified 40k-row product panel before execution.  Product
+    # runs remain explicitly bounded, but the bound must accommodate one
+    # complete frozen research vintage rather than silently shrinking it.
+    runner_max_input_bytes: int = 256 * 1024 * 1024
+    runner_max_output_bytes: int = 64 * 1024 * 1024
 
     def __post_init__(self) -> None:
         data_root = Path(self.data_root).resolve()
@@ -133,6 +141,10 @@ class ProductCanaryConfiguration:
                 raise ValueError(f"{name} must be None or at least {lower}")
         if isinstance(self.seed, bool) or not isinstance(self.seed, int) or self.seed < 0:
             raise ValueError("seed must be a non-negative integer")
+        if not 8 * 1024 * 1024 <= self.runner_max_input_bytes <= 256 * 1024 * 1024:
+            raise ValueError("runner_max_input_bytes must be 8..256 MiB")
+        if not 8 * 1024 * 1024 <= self.runner_max_output_bytes <= 64 * 1024 * 1024:
+            raise ValueError("runner_max_output_bytes must be 8..64 MiB")
         if self.specialist_id not in _SPECIALISTS:
             raise ValueError("specialist_id must name one registered research specialist")
         selected = self.specialist_ids or (self.specialist_id,)
@@ -405,6 +417,22 @@ class AgentResearchProductCanary:
             specialist_id: (source_path, source_hash)
             for specialist_id, source_path, source_hash in config.resume_sources
         }
+        answer_contract = ResearchAnswerContractCompiler().compile(
+            question_id="question_" + canonical_hash({"question": config.question})[7:19],
+            question=config.question,
+            task_hashes=(),
+        )
+        answer_requirement_ids = tuple(
+            item.requirement_id for item in answer_contract.requirements
+        )
+        required_answer_semantics = tuple(sorted({
+            semantic
+            for item in answer_contract.requirements
+            for semantic in item.dimensions
+        }))
+        comparison_required = any(
+            item.comparison_required for item in answer_contract.requirements
+        )
         for specialist_id in config.specialist_ids:
             output_kind = config.output_kind_for(specialist_id)
             task = ResearchAgentTask(
@@ -422,6 +450,11 @@ class AgentResearchProductCanary:
                 decision_time=frozen.snapshot.decision_time,
                 allowed_tools=tuple(sorted(set(FrozenMetadataToolbox._NAMES) | set(active_vibe_tools))),
                 output_kind=output_kind,
+                answer_requirement_ids=answer_requirement_ids,
+                required_answer_semantics=required_answer_semantics,
+                comparison_required=comparison_required,
+                minimum_experiments=(2 if comparison_required else 1),
+                max_experiments=(3 if comparison_required else 2),
                 max_iterations=12,
                 timeout_seconds=600.0,
             )
@@ -532,7 +565,12 @@ class AgentResearchProductCanary:
                         sandbox_root=config.artifact_root / "docker",
                         image_name=config.docker_image,
                         expected_image_id=config.docker_image_id,
-                        timeout_seconds=120.0,
+                        timeout_seconds=300.0,
+                        memory_limit="1024m",
+                        cpu_limit=1.0,
+                        tmpfs_size="256m",
+                        max_input_bytes=config.runner_max_input_bytes,
+                        max_output_bytes=config.runner_max_output_bytes,
                     )
                 )
             ),
@@ -782,7 +820,11 @@ def _load_registered_factors(data_root: Path, frozen: Any) -> tuple[RegisteredFa
 
 
 def _load_amendment(policy: ExperimentReviewPolicy) -> SandboxAmendmentIdentity:
-    receipt_path = Path(".autobuild/veriquant/research500_harness/constitution_amendment_hash.json").resolve()
+    receipt_path = (
+        _REPO_ROOT
+        / ".autobuild" / "veriquant" / "research500_harness"
+        / "constitution_amendment_hash.json"
+    )
     payload = json.loads(receipt_path.read_text(encoding="utf-8"))
     constitution_hash = str(payload.get("sha256") or "")
     if _HASH.fullmatch(constitution_hash) is None or payload.get("amendment_version") != AMENDMENT_VERSION:

@@ -15,6 +15,7 @@ import re
 from typing import Any, Mapping
 
 from ..research_campaign import DeterministicCampaignCompiler, MethodModel, ResearchMode
+from ..research_answer.compiler import ResearchAnswerContractCompiler
 
 
 PLANNER_RULE_VERSION = "alphaforge.research-task-planner/v2"
@@ -166,19 +167,25 @@ class ResearchTaskPlanner:
             raise ValueError(f"unmapped catalog experiment_type: {item.experiment_type}")
         mode = _mode_for_expected_result(str(item.expected_result_kind))
         specialists = _specialists_for_lead(str(item.lead_specialist))
+        output_kinds = _answer_driven_output_kinds(
+            question=str(item.question),
+            selected=specialists,
+            defaults=tuple((specialist, output_kind) for specialist in sorted(specialists)),
+        )
         return ResearchTaskPlan(
             question=str(item.question),
             mode=mode,
             selected_specialists=specialists,
             lead_specialist=str(item.lead_specialist),
+            # Preserve the catalog's legacy primary adapter identity for
+            # deterministic replay; current execution uses the per-specialist
+            # answer-driven adapter portfolio below.
             output_kind=output_kind,
             required_data=tuple(sorted(str(value) for value in item.required_data)),
             experiment_type=str(item.experiment_type),
             expected_result_kind=str(item.expected_result_kind),
             source="RESEARCH500_CATALOG",
-            specialist_output_kinds=tuple(
-                (specialist, output_kind) for specialist in sorted(specialists)
-            ),
+            specialist_output_kinds=output_kinds,
         )
 
     def _catalog(self, path: Path) -> dict[str, Any]:
@@ -207,6 +214,17 @@ class ResearchTaskPlanner:
             else ("price_volume",)
         )
         tags = tuple(result.draft.subject.tags) if result.draft is not None else ()
+        output_kinds = _answer_driven_output_kinds(
+            question=result.sanitized_user_text,
+            selected=selected,
+            defaults=_specialist_output_kinds(
+                selected=selected,
+                primary_output_kind=output_kind,
+                mode=recommendation.mode,
+                methods=tuple(recommendation.method_models),
+                tags=tags,
+            ),
+        )
         return ResearchTaskPlan(
             question=result.sanitized_user_text,
             mode=recommendation.mode.value,
@@ -217,13 +235,7 @@ class ResearchTaskPlanner:
             experiment_type=experiment_type,
             expected_result_kind=expected_kind,
             source="DETERMINISTIC_CAMPAIGN_COMPILER",
-            specialist_output_kinds=_specialist_output_kinds(
-                selected=selected,
-                primary_output_kind=output_kind,
-                mode=recommendation.mode,
-                methods=tuple(recommendation.method_models),
-                tags=tags,
-            ),
+            specialist_output_kinds=output_kinds,
         )
 
 
@@ -293,6 +305,38 @@ def _output_for_campaign(
     if mode is ResearchMode.VALIDATE_IDEA:
         return "RegressionTable", "HYPOTHESIS_VALIDATION", "VALIDATION_CONCLUSION"
     return "ScoreTable", "CANDIDATE_EXPLORATION", "CANDIDATE_SET"
+
+
+def _answer_driven_output_kinds(
+    *, question: str, selected: tuple[str, ...], defaults: tuple[tuple[str, str], ...]
+) -> tuple[tuple[str, str], ...]:
+    """Choose evaluator adapters needed by the answer contract.
+
+    This is not a question-to-table restriction: the semantic contract remains
+    table-agnostic.  It merely ensures the selected specialist set exposes a
+    sufficient mix of existing deterministic evaluators.
+    """
+
+    contract = ResearchAnswerContractCompiler().compile(
+        question_id="planner_preview",
+        question=question,
+        task_hashes=(),
+    )
+    ids = {item.requirement_id for item in contract.requirements}
+    values = dict(defaults)
+    lead = selected[0]
+    if "R20_CANDIDATE_COMPARISON" in ids:
+        values[lead] = "ScoreTable"
+        support = "meta_alpha" if "meta_alpha" in values else (selected[1] if len(selected) > 1 else None)
+        if support is not None:
+            values[support] = "RegressionTable"
+    if "R40_INCREMENTALITY" in ids:
+        values["meta_alpha" if "meta_alpha" in values else selected[-1]] = "RegressionTable"
+    if "R50_REGIME_STABILITY" in ids:
+        values["macro_regime" if "macro_regime" in values else selected[-1]] = "RegimeComparisonTable"
+    if "R60_EVENT_DESIGN" in ids or "R61_EVENT_OUTCOME" in ids:
+        values["expectations_events" if "expectations_events" in values else lead] = "EventTable"
+    return tuple(sorted(values.items()))
 
 
 __all__ = [

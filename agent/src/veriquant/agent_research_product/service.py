@@ -42,6 +42,8 @@ from .review_gateway import (
     receipt_dict as _receipt_dict,
 )
 from ..research_results import ResearchResultKind
+from ..research_answer.assembler import ResearchAnswerAssembler
+from .collaboration import EvidenceCollaborationAggregator
 
 
 class InMemoryDraftSourceRepository:
@@ -75,7 +77,7 @@ class MinimalChineseReportBuilder:
 
     def build(
         self, *, request, swarm, experiments, failures, artifact_hashes,
-        result_bundle, artifact_repository=None,
+        result_bundle, artifact_repository=None, research_answer=None,
     ):
         from ..agent_research_sandbox.report import CustomerResearchReport
 
@@ -239,6 +241,12 @@ class MinimalChineseReportBuilder:
             next_steps=(next_step,),
             artifact_hashes=artifact_hashes or (request.manifest.artifact_hash,),
             research_process=research_process,
+            research_answer=research_answer,
+            schema_version=(
+                "alphaforge.customer-research-report/v3"
+                if research_answer is not None
+                else "alphaforge.customer-research-report/v2"
+            ),
         )
 
 
@@ -379,6 +387,7 @@ class AgentResearchProductService:
         self.evaluator = evidence_evaluator
         self.composer = report_composer or ChineseResearchReportComposer()
         self.report_builder = report_builder or MinimalChineseReportBuilder()
+        self.answer_assembler = ResearchAnswerAssembler()
         self.review_gateway = ResearchReviewGateway(
             source_repository=source_repository,
             review_gate=review_gate,
@@ -439,6 +448,7 @@ class AgentResearchProductService:
                     artifact_hashes.extend(
                         value for value in (
                             result.review_hash, result.runner_receipt_hash,
+                            result.formula_review_hash,
                             result.evidence_result_hash, result.official_evidence_hash,
                         ) if value is not None
                     )
@@ -457,6 +467,7 @@ class AgentResearchProductService:
                             artifact_hashes.extend(
                                 value for value in (
                                     item.review_hash, item.runner_receipt_hash,
+                                    item.formula_review_hash,
                                     item.evidence_result_hash, item.official_evidence_hash,
                                 ) if value is not None
                             )
@@ -525,12 +536,71 @@ class AgentResearchProductService:
         if evidence_hashes:
             evidence_index_hash = self._write_artifact(manifest.run_id, "official_evidence_index.json", {"hashes": evidence_hashes})
             artifact_hashes.append(evidence_index_hash)
+        answer_spec = self.answer_assembler.compile_spec(request)
+        answer_spec_hash = self._write_artifact(
+            manifest.run_id, "answer_spec.json", answer_spec.to_dict(include_hash=False)
+        )
+        if answer_spec_hash != answer_spec.artifact_hash:
+            raise ValueError("answer spec content identity changed during persistence")
+        candidates = self.answer_assembler.build_candidates(
+            request=request,
+            swarm=swarm,
+            experiments=tuple(experiments),
+            artifact_repository=self.sources,
+        )
+        candidate_payload = {
+            "schema_version": "alphaforge.candidate-definitions/v1",
+            "candidates": [item.to_dict() for item in candidates],
+        }
+        candidate_index_hash = self._write_artifact(
+            manifest.run_id, "candidate_definitions.json", candidate_payload
+        )
+        collaboration = EvidenceCollaborationAggregator().summarize_experiments(
+            run_id=manifest.run_id, experiments=tuple(experiments)
+        )
+        collaboration_hash = self._write_artifact(
+            manifest.run_id,
+            "evidence_collaboration.json",
+            collaboration.to_dict(include_hash=False),
+        )
+        if collaboration_hash != collaboration.artifact_hash:
+            raise ValueError("collaboration content identity changed during persistence")
+        research_answer = self.answer_assembler.assemble(
+            request=request,
+            spec=answer_spec,
+            candidates=candidates,
+            experiments=tuple(experiments),
+            result_bundle=result_bundle,
+            collaboration=collaboration,
+            failures=tuple(sorted(set(failures))),
+        )
+        answer_hash = self._write_artifact(
+            manifest.run_id, "research_answer.json", research_answer.to_dict(include_hash=False)
+        )
+        if answer_hash != research_answer.artifact_hash:
+            raise ValueError("ResearchAnswer content identity changed during persistence")
+        answer_matrix_hash = self._write_artifact(
+            manifest.run_id,
+            "question_answer_matrix.json",
+            {
+                "schema_version": "alphaforge.question-answer-matrix/v1",
+                "question": request.question,
+                "answer_status": research_answer.answer_status.value,
+                "research_verdict": research_answer.research_verdict.value,
+                "parts": [item.to_dict() for item in research_answer.question_parts],
+            },
+        )
+        artifact_hashes.extend((
+            answer_spec_hash, candidate_index_hash, collaboration_hash, answer_hash,
+            answer_matrix_hash,
+        ))
         report_arguments = {
             "request": request, "swarm": swarm, "experiments": tuple(experiments),
             "failures": tuple(sorted(set(failures))),
             "artifact_hashes": tuple(sorted(set(artifact_hashes))),
             "result_bundle": result_bundle,
             "artifact_repository": self.sources,
+            "research_answer": research_answer.to_dict(),
         }
         try:
             report = self.report_builder.build(**report_arguments)
@@ -578,6 +648,7 @@ class AgentResearchProductService:
             report_path=str(self.identity_store.run_dir(final.run_id) / "report.md"),
             result_kind=result_bundle.result_kind,
             result_bundle_hash=result_bundle.artifact_hash,
+            answer_hash=answer_hash,
         )
         self._write_result(result)
         with self._guard:
@@ -594,6 +665,7 @@ class AgentResearchProductService:
 
         revisable_failure = initial.failure_code in {
             ProductFailureCode.REVIEW_REJECTED.value,
+            ProductFailureCode.FORMULA_SEMANTIC_REVIEW_REQUIRED.value,
             ProductFailureCode.RUNNER_BLOCKED.value,
         }
         if not revisable_failure or not initial.review_hash or not initial.review_feedback_codes:
@@ -613,6 +685,13 @@ class AgentResearchProductService:
                 "Revise it once using only the typed, redacted runtime feedback. "
                 "Check variable types and name shadowing; keep the question, output contract, "
                 "data fields and data identity unchanged."
+            )
+        elif initial.failure_code == ProductFailureCode.FORMULA_SEMANTIC_REVIEW_REQUIRED.value:
+            revision_instruction = (
+                "The deterministic formula-semantic reviewer found that a same-date "
+                "cross-sectionally constant field was used as a direct additive ranking term. "
+                "Revise once without changing data identity: use that field only for an "
+                "economically meaningful interaction or regime split, or remove it."
             )
         else:
             revision_instruction = (
@@ -644,11 +723,16 @@ class AgentResearchProductService:
             if draft.kind is not ResearchDraftKind.CODE or draft.content_hash in seen:
                 continue
             seen.add(draft.content_hash)
-            results.append(self.review_gateway.evaluate_draft(
+            revised_result = self.review_gateway.evaluate_draft(
                 manifest=manifest,
                 outcome=revised_outcome,
                 source_hash=draft.content_hash,
                 prior_review_hash=initial.review_hash,
+            )
+            results.append(replace(
+                revised_result,
+                revision_of_source_hash=initial.source_hash,
+                revision_reason_codes=initial.review_feedback_codes,
             ))
         return tuple(results)
 

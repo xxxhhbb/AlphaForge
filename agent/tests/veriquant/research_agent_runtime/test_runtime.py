@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -208,6 +209,29 @@ def test_vibe_adapter_produces_only_plan_investigation_and_code_drafts(tmp_path)
     assert store.read_bytes(code.content_hash) == b"score = frame['close'].pct_change(20)"
     plan = next(item for item in outcome.draft_artifacts if item.kind.value == "PLAN")
     assert json.loads(store.read_bytes(plan.content_hash))["plan"] == "先调查数据，再提出并自审候选。"
+
+
+def test_comparison_task_preserves_one_completed_draft_as_partial(tmp_path):
+    task = replace(
+        _task(1),
+        answer_requirement_ids=("R20_CANDIDATE_COMPARISON",),
+        required_answer_semantics=("candidate_comparison", "prediction"),
+        comparison_required=True,
+        minimum_experiments=2,
+        max_experiments=3,
+    )
+    outcome = VibeAgentLoopAdapter(
+        loop_factory=_Factory(),
+        draft_store=ContentAddressedHandleStore(tmp_path / "drafts"),
+    ).run(
+        task=task,
+        toolbox=_toolbox(task),
+        upstream_context={},
+        cancellation=ResearchCancellationToken(),
+    )
+    assert outcome.status is ResearchAgentStatus.PARTIAL
+    assert sum(item.kind.value == "CODE" for item in outcome.draft_artifacts) == 1
+    assert outcome.failure_code is None
 
 
 def test_vibe_adapter_records_typed_data_gaps_and_transparent_proxies(tmp_path):

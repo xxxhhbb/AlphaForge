@@ -7,7 +7,10 @@ calculates a metric and cannot upgrade an admission or promotion state.
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 import re
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Mapping, Sequence
@@ -41,7 +44,8 @@ _CONCLUSION_ZH = {
 
 _FORBIDDEN = re.compile(
     r"(?i)(?:bearer\s+\S+|authorization\s*:|api[_-]?key\s*[:=]|token\s*[:=]|"
-    r"sealed(?:_|\s)*(?:metric|data|value)|target_weights?|orders?|broker_credentials?)"
+    r"sealed(?:_|\s)*(?:metric|data|value)|\btarget_weights?\b|\borders?\b|"
+    r"\bbroker_credentials?\b)"
 )
 
 
@@ -133,6 +137,7 @@ class CustomerResearchReport:
     next_steps: tuple[str, ...]
     artifact_hashes: tuple[str, ...]
     research_process: tuple[ResearchProcessNarrative, ...] = ()
+    research_answer: Mapping[str, Any] | None = None
     report_type: str = "ALPHAFORGE_CUSTOMER_RESEARCH_REPORT"
     schema_version: str = "alphaforge.customer-research-report/v2"
 
@@ -159,6 +164,13 @@ class CustomerResearchReport:
             not isinstance(item, ResearchProcessNarrative) for item in self.research_process
         ):
             raise ValueError("research_process must contain ResearchProcessNarrative")
+        if self.schema_version == "alphaforge.customer-research-report/v3":
+            if not isinstance(self.research_answer, Mapping):
+                raise ValueError("v3 report requires a ResearchAnswer payload")
+            answer = dict(self.research_answer)
+            persisted = answer.pop("artifact_hash", None)
+            if persisted is None or canonical_hash(answer) != persisted:
+                raise ValueError("ResearchAnswer payload hash mismatch")
         if self.conclusion in {
             ResearchConclusion.SUPPORTED,
             ResearchConclusion.CONDITIONALLY_SUPPORTED,
@@ -203,6 +215,8 @@ class CustomerResearchReport:
         }
         if self.schema_version != "alphaforge.customer-research-report/v1" or self.research_process:
             value["research_process"] = [item.to_dict() for item in self.research_process]
+        if self.research_answer is not None:
+            value["research_answer"] = dict(self.research_answer)
         if include_hash:
             value["report_hash"] = canonical_hash(value)
         return value
@@ -253,6 +267,10 @@ class CustomerResearchReport:
                 )
                 for item in value.get("research_process", ())
             ),
+            research_answer=(
+                None if value.get("research_answer") is None
+                else dict(value["research_answer"])
+            ),
             report_type=str(value.get("report_type", "ALPHAFORGE_CUSTOMER_RESEARCH_REPORT")),
             schema_version=str(value.get("schema_version", "alphaforge.customer-research-report/v1")),
         )
@@ -270,6 +288,8 @@ class ChineseResearchReportComposer:
     """Render a stable, professional report from machine-bound facts."""
 
     def render(self, report: CustomerResearchReport) -> str:
+        if report.research_answer is not None:
+            return self._render_v3(report)
         evidence_map = self._evidence_map(report.metrics)
         sections = [
             "# AlphaForge（千因研究院）研究报告",
@@ -312,9 +332,12 @@ class ChineseResearchReportComposer:
             self._append_list(sections, "Agent 的研究路线", report.research_routes)
             self._append_list(sections, "实际执行的实验", report.experiments)
 
-        sections.extend(["", "## 最值得关注的研究发现", ""])
+        sections.extend(["", "## 研究发现如何回答原问题", ""])
+        score_findings = self._score_findings(report)
         findings = self._client_findings(report.metrics)
-        if findings:
+        if score_findings:
+            sections.extend(score_findings)
+        elif findings:
             sections.extend([
                 "下表只保留最能回答问题的结果。这里的“统计线索”表示样本中观察到了关系，"
                 "不表示已经证明可以赚钱。p 值越小，说明该关系越不像随机波动；它仍不是收益率。",
@@ -324,16 +347,15 @@ class ChineseResearchReportComposer:
                 *findings,
             ])
         elif report.metrics:
-            sections.extend(["| 指标 | 结果 |", "|---|---:|"])
-            sections.extend(
-                f"| {self._escape(item.name)} | {self._escape(item.display_value)} |"
-                for item in report.metrics[:12]
+            sections.append(
+                "本轮生成了机器指标，但当前输出合同不足以把这些数字解释成对原问题的直接回答；"
+                "完整指标保留在附录，不能用指标清单冒充研究结论。"
             )
         else:
             sections.append("本结论没有可冒充的官方指标；具体原因见“没有完成什么”和下一步建议。")
 
         sections.extend(["", "## 原问题回答到了什么程度", ""])
-        sections.extend(["| 需要回答的部分 | 本轮状态 | 说明 |", "|---|---|---|"])
+        sections.extend(["| 需要回答的部分 | 本轮实际答案 | 关键依据 | 判断 |", "|---|---|---|---|"])
         sections.extend(self._coverage_rows(report))
 
         sections.extend(["", "## 这份结果应该怎么用", ""])
@@ -351,19 +373,27 @@ class ChineseResearchReportComposer:
             "<summary><strong>展开完整机器指标与方法复核信息</strong></summary>",
         ])
 
-        self._append_list(sections, "代码、方法与反证审查", report.review_summary)
+        labels = self._experiment_labels(report)
+        self._append_list(
+            sections, "代码、方法与反证审查",
+            tuple(self._customer_label_text(item, labels) for item in report.review_summary),
+        )
         self._append_list(sections, "稳健性与反证", report.robustness_checks)
         self._append_list(
             sections, "反对证据", self._customer_evidence_text(report.opposing_evidence),
             empty="未发现可用文字描述的决定性反对证据。",
         )
-        self._append_list(sections, "数据和方法限制", report.limitations)
+        self._append_list(
+            sections, "数据和方法限制",
+            tuple(self._customer_label_text(item, labels) for item in report.limitations),
+        )
 
         if report.metrics:
             sections.extend(["", "## 完整机器指标", ""])
-            for index, (_, metrics) in enumerate(self._group_metrics(report.metrics), start=1):
+            for index, (experiment, metrics) in enumerate(self._group_metrics(report.metrics), start=1):
+                label = labels.get(self._raw_experiment_id(experiment), f"实验 {index}")
                 sections.extend([
-                    f"### 实验 {index}", "",
+                    f"### {self._escape(label)}", "",
                     "| 指标 | 结果 |", "|---|---:|",
                 ])
                 sections.extend(
@@ -384,6 +414,262 @@ class ChineseResearchReportComposer:
         ])
         return "\n".join(sections) + "\n"
 
+    def _render_v3(self, report: CustomerResearchReport) -> str:
+        """Render only explicit answer semantics; never infer an answer from names."""
+
+        answer = dict(report.research_answer or {})
+        candidates = {
+            str(item["candidate_id"]): item
+            for item in answer.get("candidate_definitions", ())
+        }
+        decisions = {
+            str(item["candidate_id"]): item
+            for item in answer.get("candidate_decisions", ())
+        }
+        lines = [
+            "# AlphaForge（千因研究院）研究报告",
+            "",
+            "## 一句话答案",
+            "",
+            str(answer["direct_answer"]),
+            "",
+            "## 最终判断",
+            "",
+            f"- **回答状态**：{self._answer_status_zh(str(answer['answer_status']))}",
+            f"- **研究结论**：{self._answer_verdict_zh(str(answer['research_verdict']))}",
+            f"- **验证进度**：{self._answer_authority_zh(str(answer['evidence_authority']))}",
+        ]
+        if answer["evidence_authority"] == "AUXILIARY_ONLY" or (
+            answer["evidence_authority"] == "NONE" and candidates
+        ):
+            lines.append("- **权限说明**：当前属于辅助研究，尚未形成完整官方结论；已完成产物仍可复核，但不能冒充正式答案。")
+            if answer["research_verdict"] in {"SUPPORTED", "CONDITIONALLY_SUPPORTED"}:
+                lines.append("- **研究价值**：当前线索值得继续验证，但证据权限不会因此自动升级。")
+        if answer["research_verdict"] == "DATA_UNAVAILABLE":
+            lines.append("- **结果类型**：本轮形成数据缺口报告，而不是伪造研究成功。")
+        if answer["answer_status"] == "UNANSWERABLE_WITH_REASON" and candidates:
+            lines.append("- **候选状态**：没有候选通过统一审查或形成可解释的机器指标。")
+        lines.extend([
+            "",
+            "## 用户研究问题",
+            "",
+            report.question,
+            "",
+            "## 候选结论",
+            "",
+        ])
+        if candidates:
+            for candidate_id in sorted(candidates):
+                candidate = candidates[candidate_id]
+                decision = decisions[candidate_id]
+                role = str(candidate.get("result_role") or "ALPHA_SIGNAL")
+                definition_label = "Alpha 定义（实际计算方式）" if role == "ALPHA_SIGNAL" else "研究分析定义"
+                lines.extend([
+                    f"### {candidate['display_name']}",
+                    "",
+                    f"- **这项结果是什么**：{self._result_role_zh(role)}",
+                    f"- **处置**：{self._candidate_disposition_zh(str(decision['disposition']))}",
+                ])
+                if candidate.get("implementation_summary"):
+                    lines.append(
+                        f"- **实际计算公式与方向**：{candidate['implementation_summary']}"
+                    )
+                if candidate.get("input_fields"):
+                    lines.append(
+                        "- **实际输入字段**：" + "、".join(candidate["input_fields"])
+                    )
+                if candidate.get("design_warnings"):
+                    lines.append(
+                        "- **设计审查意见**："
+                        + "；".join(self._reason_zh(str(item)) for item in candidate["design_warnings"])
+                    )
+                if candidate.get("design_advisories"):
+                    lines.append(
+                        "- **稳健性提示**："
+                        + "；".join(self._reason_zh(str(item)) for item in candidate["design_advisories"])
+                    )
+                if candidate.get("revision_of_source_hash"):
+                    reasons = candidate.get("revision_reason_codes") or ()
+                    lines.append(
+                        "- **本轮修订**：该公式由上一版候选自动修订而来"
+                        + (
+                            "；修订原因："
+                            + "；".join(self._reason_zh(str(item)) for item in reasons)
+                            if reasons else ""
+                        )
+                        + "。"
+                    )
+                lines.extend([
+                    f"- **{definition_label}**：{candidate['method_summary']}",
+                    f"- **要验证的假设**：{candidate['hypothesis']}",
+                    f"- **结果类型**：{self._output_kind_zh(str(candidate['output_kind']))}",
+                    f"- **主要原因**：{'、'.join(self._reason_zh(str(item)) for item in decision['reason_codes'])}",
+                    "",
+                ])
+        else:
+            lines.extend(["本轮没有形成可进入机器评价的候选；具体原因见未完成部分。", ""])
+
+        lines.extend(["## 原问题逐项回答", ""])
+        for index, part in enumerate(answer.get("question_parts", ()), start=1):
+            question_text = part.get("question_text")
+            if question_text:
+                lines.extend([f"### {index}. {question_text}", ""])
+            lines.extend([
+                f"**答案**：{part['direct_answer']}",
+                "",
+                f"- **判断**：{part['judgment']}",
+                f"- **回答状态**：{self._answer_status_zh(str(part['answer_status']))}",
+                f"- **验证进度**：{self._answer_authority_zh(str(part['evidence_authority']))}",
+            ])
+            support = tuple(str(item["text"]) for item in part.get("supporting_facts", ()))
+            oppose = tuple(str(item["text"]) for item in part.get("opposing_facts", ()))
+            self._append_list(lines, "支持依据", support, empty="没有可登记的支持证据。")
+            self._append_list(lines, "反对或修订依据", oppose, empty="没有可登记的反对证据。")
+            if part.get("unanswered_reason"):
+                lines.append(f"- **未回答原因**：{part['unanswered_reason']}")
+            if part.get("recovery_requirement"):
+                lines.append(f"- **恢复条件**：{part['recovery_requirement']}")
+            lines.append("")
+
+        lines.extend(["## 机器指标与证据", ""])
+        fact_count = sum(
+            len(part.get("supporting_facts", ())) + len(part.get("opposing_facts", ()))
+            for part in answer.get("question_parts", ())
+        )
+        if fact_count:
+            lines.append(
+                f"本轮共有 {fact_count} 条机器指标事实进入逐项回答；其 Evidence 身份保存在机器 JSON 中。"
+            )
+        else:
+            lines.append("本轮没有可用于回答原问题的机器指标；系统没有用空指标冒充研究结论。")
+        lines.append("")
+
+        if report.research_process:
+            lines.extend(["## 研究过程", ""])
+            for index, process in enumerate(report.research_process, start=1):
+                lines.extend([
+                    f"### {index}. {process.specialist}", "",
+                    f"- **完成状态**：{self._plain_status(process.status)}",
+                    f"- **研究思路**：{process.plan}",
+                ])
+                self._append_list(lines, "实际调查与实验", self._plain_attempts(process))
+
+        lines.extend(["## 冲突、限制与未完成部分", ""])
+        conflicts = tuple(self._conflict_zh(str(item)) for item in answer.get("conflicts", ()))
+        candidate_labels = {
+            candidate_id: str(item["display_name"])
+            for candidate_id, item in candidates.items()
+        }
+        self._append_list(lines, "研究组或指标冲突", conflicts, empty="未检测到需要披露的跨组冲突。")
+        self._append_list(lines, "未测试范围", tuple(answer.get("untested_scope", ())), empty="所有登记的回答要求均已进入评价。")
+        self._append_list(
+            lines,
+            "限制",
+            tuple(
+                self._customer_label_text(str(item), candidate_labels)
+                for item in answer.get("limitations", ())
+            ),
+            empty="没有额外登记限制。",
+        )
+        lines.extend([
+            "", "## 下一项具体实验", "",
+            str(answer["next_experiment"]),
+            "",
+            "## 数据、复现与权限说明", "",
+            "- 研究计划、候选定义、源码审查、隔离运行、标准结果表、Evidence、答案和报告均已分别保存。",
+            "- Agent 只生成研究草案与代码；研究结论由独立机器 Evidence 和答案装配器生成。",
+            "- 报告中的数字来自绑定的机器 Evidence；研究模型不能修改指标、答案状态或候选处置。",
+            "- 技术哈希保存在机器 JSON 中，客户正文不展示内部标识。",
+            "- 本报告不构成 Promotion、组合、风险审批或交易指令。",
+        ])
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _answer_status_zh(value: str) -> str:
+        return {
+            "ANSWERED": "已回答",
+            "CONDITIONALLY_ANSWERED": "有条件回答",
+            "NEGATIVE_ANSWER": "已形成明确的负向答案",
+            "PARTIALLY_ANSWERED": "部分回答",
+            "UNANSWERABLE_WITH_REASON": "当前不可回答，原因与恢复条件已明确",
+        }.get(value, value)
+
+    @staticmethod
+    def _answer_verdict_zh(value: str) -> str:
+        return {
+            "SUPPORTED": "机器证据支持",
+            "CONDITIONALLY_SUPPORTED": "机器证据在明确条件下支持",
+            "REJECTED": "当前机器证据不支持",
+            "INSUFFICIENT_EVIDENCE": "证据不足",
+            "DATA_UNAVAILABLE": "数据或评价条件不可用",
+        }.get(value, value)
+
+    @staticmethod
+    def _answer_authority_zh(value: str) -> str:
+        return {
+            "NONE": "尚未形成可评价的机器结果",
+            "AUXILIARY_ONLY": "已完成实验与机器一致性复核，尚待独立评价",
+            "OFFICIAL_EVIDENCE": "已完成独立机器评价",
+            "MIXED": "主要结果已完成独立机器评价；部分条件分析仍待补充复核",
+        }.get(value, value)
+
+    @staticmethod
+    def _candidate_disposition_zh(value: str) -> str:
+        return {
+            "RETAIN": "保留",
+            "RETAIN_WITH_CONDITIONS": "有条件保留",
+            "REVISE": "修订后重测",
+            "REJECT": "拒绝",
+            "NOT_EVALUATED": "未完成评价",
+        }.get(value, value)
+
+    @staticmethod
+    def _output_kind_zh(value: str) -> str:
+        return {
+            "ScoreTable": "横截面评分评价",
+            "RegressionTable": "控制变量回归评价",
+            "RegimeComparisonTable": "市场状态比较",
+            "EventTable": "事件研究",
+            "DiagnosticTable": "诊断研究",
+            "DatasetAssessmentTable": "数据集适用性评价",
+        }.get(value, value)
+
+    @staticmethod
+    def _result_role_zh(value: str) -> str:
+        return {
+            "ALPHA_SIGNAL": "可计算的横截面 Alpha 信号",
+            "STATISTICAL_TEST": "控制变量后的统计检验，不是独立 Alpha",
+            "CONDITION_ANALYSIS": "市场状态条件分析，用于限定 Alpha 的适用环境",
+            "EVENT_STUDY": "事件效应研究",
+            "DIAGNOSTIC": "根因诊断，不直接生成 Alpha",
+            "DATA_ASSESSMENT": "数据适用性评估，不直接生成 Alpha",
+        }.get(value, value)
+
+    @staticmethod
+    def _reason_zh(value: str) -> str:
+        return {
+            "MACHINE_EVIDENCE_SUPPORTS": "机器 Evidence 支持",
+            "CONDITIONAL_MACHINE_SUPPORT": "存在机器支持，但仍有冲突或尚未完成的验证",
+            "CANDIDATE_DEFINITION_INCOMPLETE": "候选没有完整说明输入字段、计算步骤和分数方向，补齐定义后重测",
+            "CROSS_SECTION_CONSTANT_ADDITIVE_TERM": (
+                "市场统一变量被直接作为横截面加法项；它不会改变同日股票排序，"
+                "应改为市场状态分组或与个股特征交互后重测"
+            ),
+            "HIGH_FEATURE_CORRELATION": "输入特征高度相关；不阻断研究，但需检查冗余和结果稳定性",
+            "MACHINE_EVIDENCE_REJECTS": "机器 Evidence 不支持",
+            "MACHINE_REVIEW_REQUIRES_REVISION": "机器审查要求修订",
+            "NO_MACHINE_VERDICT": "尚未形成机器结论",
+        }.get(value, value)
+
+    @staticmethod
+    def _conflict_zh(value: str) -> str:
+        if value.startswith("METRIC_DIRECTION_CONFLICT:"):
+            return "不同研究路线对同一指标给出相反方向：" + value.split(":", 1)[1]
+        return {
+            "SPECIALIST_VERDICT_CONFLICT": "不同专业研究组对候选是否成立存在分歧。",
+            "EVIDENCE_AUTHORITY_MIXED": "本轮同时包含官方和辅助 Evidence，结论按较低权限解释。",
+        }.get(value, value)
+
     @staticmethod
     def _decision_sentence(report: CustomerResearchReport) -> str:
         if report.conclusion is ResearchConclusion.PARTIAL_RESEARCH_RESULT and report.metrics:
@@ -395,6 +681,13 @@ class ChineseResearchReportComposer:
         return "**研究处置**：保留已完成产物，先解决报告列出的缺口再继续。"
 
     def _plain_key_points(self, report: CustomerResearchReport) -> tuple[str, ...]:
+        verdicts = tuple(self._experiment_verdicts(report).values())
+        if any(value == "VALIDATED_RESEARCH" for value in verdicts):
+            points = ["至少一条研究路线通过了可见机器验证，但仍需结合其他路线的反对证据决定是否修订。"]
+            if any(value in {"REVISE", "REJECT", "REJECTED"} for value in verdicts):
+                points.append("不同研究路线给出了冲突结论；报告不会用最好的单个指标掩盖这种分歧。")
+            points.append("下文会分别说明预测关系、成本后表现、稳定性和增量性，而不是只罗列指标。")
+            return tuple(points)
         records = self._aggregate_regression(report.metrics)
         ordered = sorted(
             (item for item in records.items() if item[1]["significant"]),
@@ -495,6 +788,166 @@ class ChineseResearchReportComposer:
                 bucket["significant"].append(row)
         return result
 
+    def _score_findings(self, report: CustomerResearchReport) -> list[str]:
+        """Explain ScoreTable evidence as answers, never as an identifier dump."""
+        labels = self._experiment_labels(report)
+        verdicts = self._experiment_verdicts(report)
+        blocks: list[str] = []
+        score_groups = []
+        for experiment, metrics in self._group_metrics(report.metrics):
+            values = self._metric_values(metrics)
+            if not any(key in values for key in ("ic_mean", "rank_ic", "net_return", "icir")):
+                continue
+            score_groups.append((experiment, metrics, values))
+        if not score_groups:
+            return blocks
+        blocks.append(
+            "机器不是按单个漂亮数字挑选候选，而是同时检查预测方向、成本后表现、"
+            "跨时期/状态稳定性以及相对已登记因子的增量性。下面按研究路线解释结果。"
+        )
+        for index, (experiment, _metrics, values) in enumerate(score_groups, start=1):
+            raw_id = self._raw_experiment_id(experiment)
+            label = labels.get(raw_id, f"候选 {index}")
+            verdict = verdicts.get(raw_id, "")
+            blocks.extend(["", f"### {self._escape(label)}", ""])
+
+            ic_mean = self._number(values.get("ic_mean"))
+            rank_ic = self._number(values.get("rank_ic"))
+            pearson_ic = self._number(values.get("pearson_ic"))
+            direction_values = [value for value in (ic_mean, rank_ic, pearson_ic) if value is not None and value != 0]
+            if direction_values and all(value > 0 for value in direction_values):
+                direction_answer = "各项 IC 方向一致为正，候选评分较高的股票随后收益整体更高。"
+            elif direction_values and all(value < 0 for value in direction_values):
+                direction_answer = "各项 IC 方向一致为负，原始候选方向与预期相反。"
+            elif direction_values:
+                direction_answer = "不同 IC 口径方向冲突，说明候选排序关系不稳定，不能只引用其中一个正数。"
+            else:
+                direction_answer = "现有 IC 没有提供可识别方向。"
+            blocks.append(f"**对预测能力的回答**：{direction_answer}")
+            blocks.append(
+                "- **预测证据**："
+                + self._joined_metrics(values, (
+                    ("ic_mean", "IC 均值"), ("rank_ic", "RankIC"),
+                    ("pearson_ic", "Pearson IC"), ("icir", "ICIR"),
+                ))
+                + "。IC 衡量横截面评分与未来收益的关系；ICIR 衡量这种关系相对自身波动是否稳定。"
+            )
+
+            net_return = self._number(values.get("net_return"))
+            if net_return is None:
+                cost_answer = "尚未形成成本后收益，不能判断可交易性。"
+            elif net_return > 0:
+                cost_answer = "扣除成本后仍为正（已计入本次价差和冲击成本），但这不等同于已经可以投入交易。"
+            elif net_return < 0:
+                cost_answer = "扣除成本后为负，当前形式不具备可交易支持。"
+            else:
+                cost_answer = "扣除成本后没有剩余收益。"
+            blocks.append(f"- **成本与交易性**：{cost_answer} " + self._joined_metrics(values, (
+                ("gross_return", "成本前收益"), ("net_return", "成本后收益"),
+                ("turnover", "换手率"), ("max_drawdown", "最大回撤"),
+            )) + "。")
+
+            sub_fraction = self._number(values.get("subperiod_positive_fraction"))
+            regime_fraction = self._number(values.get("regime_positive_fraction"))
+            if sub_fraction is not None and sub_fraction < 1:
+                stability = "至少有部分子时期没有保持正向，时间稳定性尚未完全成立。"
+            elif regime_fraction is not None and regime_fraction < 1:
+                stability = "至少有部分市场状态没有保持正向，状态稳定性尚未完全成立。"
+            elif sub_fraction == 1 and regime_fraction == 1:
+                stability = "在当前划分的子时期和市场状态中方向均保持为正。"
+            else:
+                stability = "当前标准表没有给出足够的分期或分状态稳定性信息。"
+            blocks.append(f"- **稳定性**：{stability} " + self._joined_metrics(values, (
+                ("subperiod_min_ic", "最弱子时期 IC"),
+                ("subperiod_positive_fraction", "子时期正向比例"),
+                ("regime_min_ic", "最弱市场状态 IC"),
+                ("regime_positive_fraction", "市场状态正向比例"),
+            )) + "。")
+
+            blocks.append("- **相对已有因子的增量性**：" + self._joined_metrics(values, (
+                ("incremental_ic_mean", "增量 IC 均值"),
+                ("max_registered_abs_correlation", "与已登记因子最高绝对相关性"),
+            )) + "。相关性记录为 0 时仍需确认目标基准因子确实进入本次比较，不能把零值自动解释为完全独立。")
+            if verdict:
+                blocks.append(f"- **机器判断**：{self._plain_verdict(verdict)}")
+        return blocks
+
+    @staticmethod
+    def _metric_values(metrics: Sequence[tuple[str, BoundMetric]]) -> dict[str, str]:
+        reverse = {
+            "成本前收益": "gross_return", "IC 均值": "ic_mean", "IC 标准差": "ic_std",
+            "ICIR": "icir", "增量 IC 均值": "incremental_ic_mean",
+            "线性冲击成本": "linear_impact_cost", "最大回撤": "max_drawdown",
+            "与已登记因子最高相关性": "max_registered_abs_correlation",
+            "成本后收益": "net_return", "有效观测数": "observation_count",
+            "Pearson IC": "pearson_ic", "评价期数": "period_count",
+            "分位数组合价差": "quantile_spread", "RankIC": "rank_ic",
+            "最弱市场状态 IC": "regime_min_ic", "状态正向比例": "regime_positive_fraction",
+            "价差成本": "spread_cost", "最弱子时期 IC": "subperiod_min_ic",
+            "子时期正向比例": "subperiod_positive_fraction", "换手率": "turnover",
+        }
+        return {reverse.get(name, name): metric.display_value for name, metric in metrics}
+
+    @staticmethod
+    def _number(value: str | None) -> float | None:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _joined_metrics(values: Mapping[str, str], fields: Sequence[tuple[str, str]]) -> str:
+        rendered = [f"{label} {values[key]}" for key, label in fields if key in values]
+        return "；".join(rendered) if rendered else "本轮未生成对应指标"
+
+    def _experiment_labels(self, report: CustomerResearchReport) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for process in report.research_process:
+            experiment_ids = []
+            for attempt in process.attempts:
+                match = re.search(r"提交实验\s+([^：]+)：", attempt)
+                if match:
+                    experiment_ids.append(match.group(1).strip())
+            for index, experiment_id in enumerate(dict.fromkeys(experiment_ids), start=1):
+                suffix = f" · 修订实验 {index}" if len(set(experiment_ids)) > 1 else " · 候选"
+                result[experiment_id] = process.specialist + suffix
+        return result
+
+    @staticmethod
+    def _experiment_verdicts(report: CustomerResearchReport) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for process in report.research_process:
+            for attempt in process.attempts:
+                match = re.search(r"提交实验\s+([^：]+)：[^，。]+(?:，评价为\s+([^。]+))?", attempt)
+                if match and match.group(2):
+                    result[match.group(1).strip()] = match.group(2).strip()
+        return result
+
+    @staticmethod
+    def _plain_verdict(value: str) -> str:
+        return {
+            "VALIDATED_RESEARCH": "研究验证通过：保留该方向进入下一轮严格验证。",
+            "REVISE": "需要修订：有可用线索，但稳定性或证据一致性不足。",
+            "REJECT": "拒绝：当前证据不支持保留该候选。",
+            "REJECTED": "拒绝：当前证据不支持保留该候选。",
+            "SUPPORTED": "研究结果支持该命题。",
+            "CONDITIONALLY_SUPPORTED": "仅在明确条件下得到支持。",
+        }.get(value, value)
+
+    @staticmethod
+    def _raw_experiment_id(value: str) -> str:
+        return re.sub(r"（(?:机器复核研究结果|正式 Evidence)）$", "", value).strip()
+
+    @staticmethod
+    def _customer_label_text(value: str, labels: Mapping[str, str]) -> str:
+        result = value
+        for experiment_id, label in sorted(labels.items(), key=lambda item: -len(item[0])):
+            result = result.replace(experiment_id, label)
+        result = re.sub(r"task_[A-Za-z0-9_]+", "内部实验", result)
+        return result
+
     def _client_findings(self, metrics: Sequence[BoundMetric]) -> list[str]:
         records = self._aggregate_regression(metrics)
         ordered = sorted(
@@ -540,10 +993,13 @@ class ChineseResearchReportComposer:
         lines = [
             "- **可以使用的部分**：将机器结果支持、且在不同研究路线中方向一致的发现用于下一轮研究决策。",
             "- **暂时不能使用的部分**：统计系数、相关性或事件效应不能直接解释为预期收益，也不能据此生成持仓。",
-            "- **当前证据等级**：以报告开头的机器结论为准；未列入机器指标的模型解释不构成证据。",
+            "- **当前验证进度**：以报告开头的机器结论为准；未列入机器指标的模型解释不构成证据。",
         ]
         if report.limitations:
-            lines.append("- **最重要的风险**：" + "；".join(report.limitations[:3]))
+            labels = self._experiment_labels(report)
+            lines.append("- **最重要的风险**：" + "；".join(
+                self._customer_label_text(item, labels) for item in report.limitations[:3]
+            ))
         else:
             lines.append("- **最重要的风险**：仍需关注样本外稳定性、交易成本、容量和已知风险暴露。")
         return lines
@@ -594,6 +1050,26 @@ class ChineseResearchReportComposer:
 
     def _headline_conclusion(self, report: CustomerResearchReport) -> str:
         """Lead with the strongest machine-bound finding, not a generic status line."""
+        score_groups = []
+        labels = self._experiment_labels(report)
+        verdicts = self._experiment_verdicts(report)
+        for experiment, metrics in self._group_metrics(report.metrics):
+            values = self._metric_values(metrics)
+            if any(key in values for key in ("ic_mean", "rank_ic", "net_return", "icir")):
+                score_groups.append((self._raw_experiment_id(experiment), values))
+        validated = [item for item in score_groups if verdicts.get(item[0]) == "VALIDATED_RESEARCH"]
+        if validated:
+            experiment_id, values = validated[0]
+            label = labels.get(experiment_id, "一条候选路线")
+            return (
+                f"本轮由{label}提出的候选通过可见机器验证："
+                + self._joined_metrics(values, (
+                    ("ic_mean", "IC 均值"), ("rank_ic", "RankIC"),
+                    ("net_return", "成本后收益"), ("icir", "ICIR"),
+                ))
+                + "。但其他研究路线与分时期/分状态结果并不完全一致，"
+                "所以总体结论是保留该方向并修订验证，而不是直接采用。"
+            )
         significant: dict[str, list[tuple[float, float]]] = {}
         grouped: dict[tuple[str, str], dict[str, BoundMetric]] = {}
         for item in report.metrics:
@@ -681,47 +1157,115 @@ class ChineseResearchReportComposer:
         question = report.question.casefold()
         names = tuple(item.name.casefold() for item in report.metrics)
         has_regression = any("coefficient." in name for name in names)
-        has_score = any(
-            token in name for name in names
-            for token in ("rankic", "icir", "成本后收益", "net_return")
-        )
-        rows = [
-            "| 未来收益预测关系 | "
-            + ("已做完整机器评价" if has_score else "已做初步机器检验" if has_regression else "尚未检验")
-            + " | "
-            + ("已形成 IC、收益或成本类指标。" if has_score else "当前主要是回归关系，尚未形成完整可交易因子评价。" if has_regression else "没有对应标准结果表。")
-            + " |"
-        ]
+        labels = self._experiment_labels(report)
+        verdicts = self._experiment_verdicts(report)
+        score_groups: list[tuple[str, dict[str, str]]] = []
+        for experiment, metrics in self._group_metrics(report.metrics):
+            values = self._metric_values(metrics)
+            if any(key in values for key in ("ic_mean", "rank_ic", "net_return", "icir")):
+                score_groups.append((self._raw_experiment_id(experiment), values))
+
+        rows: list[str] = []
+        if score_groups:
+            directions = []
+            evidence = []
+            for experiment_id, values in score_groups:
+                ic = self._number(values.get("ic_mean"))
+                rank = self._number(values.get("rank_ic"))
+                pearson = self._number(values.get("pearson_ic"))
+                nonzero = [item for item in (ic, rank, pearson) if item is not None and item != 0]
+                direction = "正向" if nonzero and all(item > 0 for item in nonzero) else "负向" if nonzero and all(item < 0 for item in nonzero) else "方向冲突"
+                directions.append(direction)
+                label = labels.get(experiment_id, "一条候选路线")
+                prediction_metrics = self._joined_metrics(values, (
+                    ("ic_mean", "IC均值"), ("rank_ic", "RankIC"),
+                    ("net_return", "成本后收益"),
+                ))
+                evidence.append(
+                    f"{label}：{prediction_metrics}，"
+                    f"机器判断为{self._plain_verdict(verdicts.get(experiment_id, '未单独记录'))}"
+                )
+            if set(directions) == {"正向"}:
+                answer = "候选整体呈正向预测关系。"
+                judgment = "已回答，但仍需样本外验证"
+            elif "正向" in directions:
+                answer = "至少一条候选呈正向，但不同路线或 IC 口径存在冲突。"
+                judgment = "部分回答，不能合并成单一肯定结论"
+            elif set(directions) == {"负向"}:
+                answer = "候选方向整体与原假设相反。"
+                judgment = "已回答：当前不支持"
+            else:
+                answer = "现有结果方向不一致，尚不能确认预测关系。"
+                judgment = "需要修订"
+            rows.append(
+                f"| 未来收益预测关系 | {self._escape(answer)} | {self._escape('；'.join(evidence))} | {judgment} |"
+            )
+        elif has_regression:
+            rows.append("| 未来收益预测关系 | 回归中观察到变量关系，但尚未形成可交易评分。 | 已有系数与 p 值，缺少完整 IC、成本和排序评价。 | 初步回答 |")
+        else:
+            rows.append("| 未来收益预测关系 | 本轮没有可评价的标准结果表。 | 没有对应机器指标。 | 尚未回答 |")
+
         if any(token in question for token in ("低相关", "增量", "正交", "现有")):
-            direct = any(token in name for name in names for token in ("相关性", "correlation", "incremental_ic"))
+            direct_groups = [
+                (experiment_id, values) for experiment_id, values in score_groups
+                if "incremental_ic_mean" in values or "max_registered_abs_correlation" in values
+            ]
             proxy = any("orthogonal_factor" in name for name in names)
-            rows.append(
-                "| 与既有因子的低相关或增量性 | "
-                + ("已直接检验" if direct else "已做近似检验" if proxy else "尚未检验")
-                + " | "
-                + ("存在直接相关性或增量指标。" if direct else "使用正交候选回归，但没有直接报告与目标因子的相关系数。" if proxy else "没有相关性或残差增量结果。")
-                + " |"
-            )
+            if direct_groups:
+                evidence = "；".join(
+                    f"{labels.get(experiment_id, '候选')}："
+                    + self._joined_metrics(values, (("incremental_ic_mean", "增量IC均值"), ("max_registered_abs_correlation", "最高绝对相关性")))
+                    for experiment_id, values in direct_groups
+                )
+                zero_correlation = any(self._number(values.get("max_registered_abs_correlation")) == 0 for _, values in direct_groups)
+                caveat = "；相关性为0的记录需复核基准因子是否实际进入比较" if zero_correlation else ""
+                rows.append(f"| 与既有因子的低相关或增量性 | 候选保留了正的增量 IC 记录，但低相关性结论仍需核实。 | {self._escape(evidence + caveat)} | 部分回答 |")
+            elif proxy:
+                rows.append("| 与既有因子的低相关或增量性 | 只做了正交代理回归，未直接回答与目标因子的相关性。 | 没有目标因子相关系数或残差增量表。 | 尚未完整回答 |")
+            else:
+                rows.append("| 与既有因子的低相关或增量性 | 本轮未完成直接比较。 | 没有相关性或残差增量结果。 | 尚未回答 |")
+
         if any(token in question for token in ("shibor", "状态", "高低", "环境")):
-            direct = any(token in name for name in names for token in ("regime", "状态正向比例", "最弱市场状态"))
+            regime_metrics = {
+                name: item.display_value
+                for item in report.metrics
+                for _, name in (self._split_metric(item.name),)
+                if any(token in name.casefold() for token in ("regime", "shibor", "sign_stability", "effect.mean return"))
+            }
+            direct = bool(regime_metrics)
             proxy = any("shibor" in name for name in names)
-            rows.append(
-                "| 市场状态稳定性 | "
-                + ("已分状态检验" if direct else "已做交互项检验" if proxy else "尚未检验")
-                + " | "
-                + ("已形成分状态样本和效应比较。" if direct else "Shibor 已进入回归，但未形成高低状态的独立表现表。" if proxy else "没有状态比较结果。")
-                + " |"
+            stability_zero = any(
+                "sign_stability" in name.casefold() and self._number(value) == 0
+                for name, value in regime_metrics.items()
             )
+            if direct:
+                answer = "高低 Shibor 状态下的效果没有保持稳定。" if stability_zero else "已经形成分状态结果，但仍需结合最弱状态和样本量判断。"
+                key_values = "；".join(f"{self._pretty_metric(name)} {value}" for name, value in list(regime_metrics.items())[:6])
+                rows.append(f"| 市场状态稳定性 | {answer} | {self._escape(key_values)} | {'已回答：不稳定' if stability_zero else '已回答但需谨慎'} |")
+            elif proxy:
+                rows.append("| 市场状态稳定性 | Shibor 只作为回归变量或交互项，不能回答高低状态是否稳定。 | 缺少独立分状态收益、IC、成本和样本数。 | 尚未完整回答 |")
+            else:
+                rows.append("| 市场状态稳定性 | 本轮未进行状态比较。 | 没有状态比较结果。 | 尚未回答 |")
+
         if any(token in question for token in ("成本", "换手", "流动性", "容量")):
-            direct = any(token in name for name in names for token in ("成本后收益", "spread_cost", "impact_cost", "换手率"))
+            direct_groups = [
+                (experiment_id, values) for experiment_id, values in score_groups
+                if "net_return" in values or "turnover" in values
+            ]
             proxy = any("coefficient.turnover_rate" in name for name in names)
-            rows.append(
-                "| 成本、换手与可交易性 | "
-                + ("已直接检验" if direct else "仅有流动性代理" if proxy else "尚未检验")
-                + " | "
-                + ("已有成本或换手机器指标。" if direct else "换手率只作为解释变量，尚未计算候选交易成本。" if proxy else "没有成本模型对应的结果。")
-                + " |"
-            )
+            if direct_groups:
+                evidence = "；".join(
+                    f"{labels.get(experiment_id, '候选')}："
+                    + self._joined_metrics(values, (("gross_return", "成本前收益"), ("net_return", "成本后收益"), ("turnover", "换手率")))
+                    for experiment_id, values in direct_groups
+                )
+                all_positive = all((self._number(values.get("net_return")) or 0) > 0 for _, values in direct_groups)
+                answer = "本轮候选在当前成本模型下均保留正收益，但换手不低，仍需容量和更高成本压力测试。" if all_positive else "至少一条候选扣除成本后失效，不能把成本前结果当成可交易结果。"
+                rows.append(f"| 成本、换手与可交易性 | {answer} | {self._escape(evidence)} | {'已回答：当前成本情景通过' if all_positive else '已回答：存在成本失败'} |")
+            elif proxy:
+                rows.append("| 成本、换手与可交易性 | 换手率只是解释变量，尚未计算候选自身的交易成本。 | 缺少成本后收益和调仓换手。 | 尚未完整回答 |")
+            else:
+                rows.append("| 成本、换手与可交易性 | 本轮未完成交易性评价。 | 没有成本模型对应结果。 | 尚未回答 |")
         return rows
 
     def _group_metrics(
@@ -796,7 +1340,30 @@ class ChineseResearchReportComposer:
         lines.extend((f"- {item}" for item in values) if values else (empty,))
 
 
+def render_persisted_report(source: str | Path, destination: str | Path) -> str:
+    """Atomically rebuild a customer Markdown view from a verified report contract."""
+    source_path = Path(source).resolve()
+    destination_path = Path(destination).resolve()
+    payload = json.loads(source_path.read_text(encoding="utf-8"))
+    report = CustomerResearchReport.from_dict(payload)
+    markdown = ChineseResearchReportComposer().render(report)
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=destination_path.name + ".", suffix=".tmp", dir=destination_path.parent
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(markdown)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination_path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return report.artifact_hash
+
+
 __all__ = [
     "BoundMetric", "ChineseResearchReportComposer", "CustomerResearchReport", "ResearchConclusion",
-    "ResearchProcessNarrative",
+    "ResearchProcessNarrative", "render_persisted_report",
 ]

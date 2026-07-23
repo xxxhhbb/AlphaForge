@@ -220,7 +220,12 @@ def _system_prompt(task: ResearchAgentTask) -> str:
         f"{tools}. Never claim official metrics, Evidence approval, Promotion, portfolio, "
         "risk approval, orders, ledger authority, or sealed access. Generated code is text "
         "only and is not executed by this loop. Each source draft must define exactly one "
-        "synchronous run_research function. Return the required JSON draft contract."
+        "synchronous run_research function. The plan must be a complete customer-facing candidate "
+        "definition: exact fields, transformations, score direction, windows, normalization, economic "
+        "rationale, and proxy limitations. Return the required JSON draft contract."
+        f" This task must answer semantic requirements: {','.join(task.required_answer_semantics) or 'primary_conclusion'}."
+        f" Submit {task.minimum_experiments} to {task.max_experiments} distinct experiments;"
+        " when comparison is requested they must represent genuinely different definitions, not renamed duplicates."
     )
 
 

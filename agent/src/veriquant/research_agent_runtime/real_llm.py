@@ -294,7 +294,21 @@ def _safe_messages(task: ResearchAgentTask) -> tuple[Mapping[str, str], ...]:
         "You are an AlphaForge specialist. Return exactly one JSON object and no prose. "
         "The top-level keys must be exactly authority, plan, code_drafts, status; code_drafts is an array of source strings. "
         "Your authority is DRAFT_ONLY. Produce an inert research source draft for later independent review. "
-        "The source must define exactly one synchronous function named run_research with signature "
+        "The plan is also the customer-facing candidate definition. For every draft it must state a specific "
+        "candidate name, the exact visible input fields, the transformation and calculation order, score or "
+        "effect direction, observation window, forecast horizon, normalization or neutralization, economic "
+        "rationale, and any proxy limitation. For ScoreTable, explain in plain Chinese what a higher score means. "
+        "For a regime, regression, event, diagnostic, or dataset output, explicitly say that it is an analysis "
+        "rather than a second Alpha signal. A generic statement such as 'construct a score' is incomplete. "
+        "For a cross-sectional score, do not add a market-wide variable such as Shibor as a common standalone "
+        "term because it cannot change same-day stock ranks; use it as a regime condition or an interaction with "
+        "a stock-specific feature. Avoid double-counting closely related volume or flow proxies unless the plan "
+        "justifies the distinction, and explain why any non-estimated weights are economically reasonable. "
+        f"Submit {task.minimum_experiments} to {task.max_experiments} genuinely distinct experiment drafts. "
+        "When comparison is required, vary the economic definition or test rather than only renaming a formula. "
+        "Together they must address these answer semantics: "
+        f"{', '.join(task.required_answer_semantics) or 'primary_conclusion'}. "
+        "Each source must define exactly one synchronous function named run_research with signature "
         "run_research(train_rows, prediction_rows, seed). Do not load modules, access files, contact a network, "
         "or use dynamic evaluation. Use only the supplied table objects and deterministic operations. "
         f"{contract_instruction} The runner, not this "
@@ -324,8 +338,16 @@ def _safe_messages(task: ResearchAgentTask) -> tuple[Mapping[str, str], ...]:
         "output_contract": {
             "authority": "DRAFT_ONLY",
             "output_kind": task.output_kind,
-            "plan": "non-empty Chinese research plan",
-            "code_drafts": ["one complete run_research source string"],
+            "plan": (
+                "complete Chinese candidate definition: name, exact fields, transformations, direction, "
+                "observation window, forecast horizon, normalization, rationale, and proxy limitations"
+            ),
+            "answer_requirement_ids": task.answer_requirement_ids,
+            "required_answer_semantics": task.required_answer_semantics,
+            "comparison_required": task.comparison_required,
+            "code_drafts": [
+                f"{task.minimum_experiments} to {task.max_experiments} complete run_research source strings"
+            ],
             "status": "COMPLETED",
         },
         "safe_source_example": safe_example,

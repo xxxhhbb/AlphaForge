@@ -387,13 +387,65 @@ class BackendProductConvergenceHarness:
         path = Path(product_result_path).resolve()
         result = ProductRunResult.from_dict(json.loads(path.read_text(encoding="utf-8")))
         collaboration = EvidenceCollaborationAggregator().aggregate(result)
+        receipt_path = self.output_root / "multi_specialist_acceptance.json"
+        cases: list[dict[str, Any]] = []
+        if receipt_path.is_file():
+            existing = _load_bound(receipt_path)
+            if isinstance(existing.get("cases"), list):
+                cases.extend(item for item in existing["cases"] if isinstance(item, dict))
+            elif isinstance(existing.get("case"), dict):
+                # Migrate the original single-canary receipt without losing its
+                # content identity or re-running the historical real case.
+                cases.append({
+                    "case": existing["case"],
+                    "source_receipt_hash": existing.get("source_receipt_hash"),
+                })
+        entry = {
+            "case": collaboration.to_dict(),
+            "source_receipt_hash": _file_hash(path),
+            "source_run_id": result.run_id,
+        }
+        identities = {
+            str(item.get("case", {}).get("artifact_hash"))
+            for item in cases if isinstance(item.get("case"), dict)
+        }
+        if collaboration.artifact_hash not in identities:
+            cases.append(entry)
+        cases.sort(key=lambda item: (
+            str(item.get("source_run_id") or ""),
+            str(item.get("case", {}).get("artifact_hash") or ""),
+        ))
+        completed = len(cases)
+        passed = completed >= 3
         payload = {
             "schema_version": "alphaforge.multi-specialist-acceptance/v1",
-            "status": "PARTIAL", "completed_real_cases": 1, "required_real_cases": 3,
-            "case": collaboration.to_dict(), "source_receipt_hash": _file_hash(path),
-            "failure_code": "TWO_MORE_COMPLEX_COLLABORATION_CASES_REQUIRED",
+            "status": "PASSED" if passed else "PARTIAL",
+            "completed_real_cases": completed,
+            "required_real_cases": 3,
+            "cases": cases,
+            "failure_code": None if passed else "MORE_COMPLEX_COLLABORATION_CASES_REQUIRED",
         }
         self._write("multi_specialist_acceptance.json", payload)
+        matrix_path = self.output_root / "acceptance_matrix.json"
+        if matrix_path.is_file():
+            matrix = _load_bound(matrix_path)
+            matrix.setdefault("gates", {})["H9"] = "PASSED" if passed else "PARTIAL"
+            self._write("acceptance_matrix.json", matrix)
+        verdict_path = self.output_root / "final_verdict.json"
+        if verdict_path.is_file():
+            verdict = _load_bound(verdict_path)
+            completed_gates = set(verdict.get("completed_gates", []))
+            partial_gates = set(verdict.get("partial_gates", []))
+            if passed:
+                completed_gates.add("H9")
+                partial_gates.discard("H9")
+            else:
+                partial_gates.add("H9")
+            verdict["completed_gates"] = sorted(completed_gates)
+            verdict["partial_gates"] = sorted(partial_gates)
+            verdict["status"] = "PARTIAL" if partial_gates else "QUALIFIED"
+            verdict["qualified"] = verdict["status"] == "QUALIFIED"
+            self._write("final_verdict.json", verdict)
         self._event({"event": "COLLABORATION_CANARY_ACCEPTED", "collaboration_hash": collaboration.artifact_hash})
         return payload
 

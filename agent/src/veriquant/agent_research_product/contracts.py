@@ -30,6 +30,7 @@ class ProductFailureCode(str, Enum):
     SOURCE_HASH_MISMATCH = "SOURCE_HASH_MISMATCH"
     IDENTITY_BINDING_FAILED = "IDENTITY_BINDING_FAILED"
     REVIEW_REJECTED = "REVIEW_REJECTED"
+    FORMULA_SEMANTIC_REVIEW_REQUIRED = "FORMULA_SEMANTIC_REVIEW_REQUIRED"
     RUNNER_BLOCKED = "RUNNER_BLOCKED"
     OUTPUT_CONTRACT_INVALID = "OUTPUT_CONTRACT_INVALID"
     EVIDENCE_BLOCKED = "EVIDENCE_BLOCKED"
@@ -105,6 +106,8 @@ class ProductExperimentResult:
     source_hash: str
     status: ProductExperimentStatus
     review_hash: str | None = None
+    formula_review_hash: str | None = None
+    formula_advisory_codes: tuple[str, ...] = ()
     runner_receipt_hash: str | None = None
     evidence_result_hash: str | None = None
     official_evidence_hash: str | None = None
@@ -117,6 +120,9 @@ class ProductExperimentResult:
     court_outcome: str | None = None
     court_reason_codes: tuple[str, ...] = ()
     court_decision_hash: str | None = None
+    output_kind: str | None = None
+    revision_of_source_hash: str | None = None
+    revision_reason_codes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -125,6 +131,8 @@ class ProductExperimentResult:
             "source_hash": self.source_hash,
             "status": self.status.value,
             "review_hash": self.review_hash,
+            "formula_review_hash": self.formula_review_hash,
+            "formula_advisory_codes": list(self.formula_advisory_codes),
             "runner_receipt_hash": self.runner_receipt_hash,
             "evidence_result_hash": self.evidence_result_hash,
             "official_evidence_hash": self.official_evidence_hash,
@@ -143,6 +151,9 @@ class ProductExperimentResult:
             "court_outcome": self.court_outcome,
             "court_reason_codes": list(self.court_reason_codes),
             "court_decision_hash": self.court_decision_hash,
+            "output_kind": self.output_kind,
+            "revision_of_source_hash": self.revision_of_source_hash,
+            "revision_reason_codes": list(self.revision_reason_codes),
         }
 
     @classmethod
@@ -150,6 +161,7 @@ class ProductExperimentResult:
         raw = dict(value)
         raw["status"] = ProductExperimentStatus(raw["status"])
         raw["review_feedback_codes"] = tuple(raw.get("review_feedback_codes", ()))
+        raw["formula_advisory_codes"] = tuple(raw.get("formula_advisory_codes", ()))
         raw["official_metrics"] = tuple(
             (str(item["name"]), str(item["display_value"]))
             for item in raw.get("official_metrics", ())
@@ -159,6 +171,7 @@ class ProductExperimentResult:
             for item in raw.get("research_metrics", ())
         )
         raw["court_reason_codes"] = tuple(raw.get("court_reason_codes", ()))
+        raw["revision_reason_codes"] = tuple(raw.get("revision_reason_codes", ()))
         return cls(**raw)
 
 
@@ -234,6 +247,7 @@ class ProductReportBuilderProtocol(Protocol):
         experiments: tuple[ProductExperimentResult, ...], failures: tuple[str, ...],
         artifact_hashes: tuple[str, ...], result_bundle: ResearchResultBundle,
         artifact_repository: DraftSourceRepository | None = None,
+        research_answer: Mapping[str, Any] | None = None,
     ) -> CustomerResearchReport: ...
 
 
@@ -249,6 +263,7 @@ class ProductRunResult:
     report_path: str
     result_kind: ResearchResultKind = ResearchResultKind.PARTIAL_RESEARCH_RESULT
     result_bundle_hash: str | None = None
+    answer_hash: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -262,6 +277,7 @@ class ProductRunResult:
             "report_path": self.report_path,
             "result_kind": self.result_kind.value,
             "result_bundle_hash": self.result_bundle_hash,
+            "answer_hash": self.answer_hash,
         }
 
     @classmethod

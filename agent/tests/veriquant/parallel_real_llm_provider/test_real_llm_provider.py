@@ -235,6 +235,42 @@ def test_research_source_profile_defers_inert_source_to_ast_gate_but_strict_defa
     assert response.payload["code_drafts"] == payload["code_drafts"]
 
 
+def test_research_source_profile_allows_internal_python_contract_but_rejects_credentials() -> None:
+    payload = {
+        "plan": "研究计划",
+        "code_drafts": ["def run_research(rows, seed):\n    return {'rows': rows}"],
+        "status": "COMPLETED",
+    }
+    transport = FakeTransport([
+        HTTPTransportResult(status_code=200, headers={}, body=openai_body(payload)),
+    ])
+    client = OpenAICompatibleHTTPClient(
+        settings=settings(), runtime_credential="runtime-only", transport=transport,
+    )
+    response = client.complete_json(
+        messages=({
+            "role": "system",
+            "content": "Write inert Python research code; imports and execution are reviewed later.",
+        },),
+        model="desk-model", timeout_seconds=2.0, max_tokens=64,
+        temperature=0.0, top_p=1.0, response_format="json_object", extra={},
+        response_safety_profile="RESEARCH_SOURCE_DRAFT",
+    )
+    assert response.payload["plan"] == "研究计划"
+
+    blocked = OpenAICompatibleHTTPClient(
+        settings=settings(), runtime_credential="runtime-only", transport=FakeTransport(),
+    )
+    with pytest.raises(ProviderFailure) as exc:
+        blocked.complete_json(
+            messages=({"role": "user", "content": "Authorization: Bearer SENSITIVE_TEST_TOKEN"},),
+            model="desk-model", timeout_seconds=2.0, max_tokens=64,
+            temperature=0.0, top_p=1.0, response_format="json_object", extra={},
+            response_safety_profile="RESEARCH_SOURCE_DRAFT",
+        )
+    assert exc.value.code is FailureCode.UNAUTHORIZED_CAPABILITY
+
+
 def test_research_source_profile_extracts_one_wrapped_json_object_only() -> None:
     payload = {"plan": "研究计划", "code_drafts": ["def run_research(rows, seed):\n    return {'rows': rows}"], "status": "COMPLETED"}
     body = json.dumps({"choices": [{"message": {"role": "assistant", "content": "analysis wrapper\n" + json.dumps(payload) + "\nend wrapper"}}]}).encode("utf-8")

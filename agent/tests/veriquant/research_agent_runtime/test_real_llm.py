@@ -47,6 +47,25 @@ def _task() -> ResearchAgentTask:
     )
 
 
+def test_semantic_comparison_task_requests_multiple_distinct_experiments() -> None:
+    task = replace(
+        _task(),
+        answer_requirement_ids=("R10_PRIMARY_CONCLUSION", "R20_CANDIDATE_COMPARISON"),
+        required_answer_semantics=("candidate_comparison", "controlled_relation", "prediction"),
+        comparison_required=True,
+        minimum_experiments=2,
+        max_experiments=3,
+    )
+    messages = _safe_messages(task)
+    system = messages[0]["content"]
+    material = __import__("json").loads(messages[1]["content"])
+    assert "Submit 2 to 3 genuinely distinct experiment drafts" in system
+    assert material["output_contract"]["comparison_required"] is True
+    assert material["output_contract"]["required_answer_semantics"] == [
+        "candidate_comparison", "controlled_relation", "prediction",
+    ]
+
+
 def _configuration() -> AlphaForgeLLMConfiguration:
     return AlphaForgeLLMConfiguration(
         enabled=True,
@@ -202,6 +221,9 @@ def test_safe_adapter_returns_vibe_response_without_forwarding_ambient_messages(
     assert "run_research" in rendered
     assert "numeric fields can be null" in rendered
     assert "train row has no feature names at its top level" in rendered
+    assert "customer-facing candidate definition" in rendered
+    assert "what a higher score means" in rendered
+    assert "cannot change same-day stock ranks" in rendered
     assert client.calls[0]["response_safety_profile"] == "RESEARCH_SOURCE_DRAFT"
 
 

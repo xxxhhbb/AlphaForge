@@ -339,6 +339,18 @@ class ProductionExperimentBinding:
             training_cutoff=str(spec.training_cutoff),
         )
 
+    def formula_semantic_arguments(self, *, proposer_id: str) -> Mapping[str, Any]:
+        """Expose only the frozen feature rows needed by deterministic formula review."""
+
+        spec = self.execution_specs.get(proposer_id)
+        if spec is None:
+            raise ValueError("specialist has no frozen execution spec")
+        return MappingProxyType({
+            "output_kind": spec.output_kind,
+            "feature_rows": spec.feature_rows,
+            "data_snapshot_hash": self.evidence_context.snapshot.artifact_hash,
+        })
+
     def parse_table(
         self, *, review_request: ExperimentReviewRequest, receipt: ResearchProcessReceipt
     ) -> ResearchTable:

@@ -114,6 +114,13 @@ class ResearchAgentTask(CanonicalContract):
     decision_time: datetime
     allowed_tools: tuple[str, ...]
     output_kind: str = "ScoreTable"
+    answer_requirement_ids: tuple[str, ...] = ()
+    required_answer_semantics: tuple[str, ...] = ()
+    comparison_required: bool = False
+    # Zero is retained only for replay of pre-contract outcomes.  Current
+    # product tasks set an explicit minimum of one (or two for comparisons).
+    minimum_experiments: int = 0
+    max_experiments: int = 3
     depends_on: tuple[str, ...] = ()
     input_from: Mapping[str, str] = field(default_factory=dict)
     max_iterations: int = 12
@@ -137,6 +144,18 @@ class ResearchAgentTask(CanonicalContract):
             "DiagnosticTable", "DatasetAssessmentTable",
         }:
             fail(FailureCode.INVALID_VALUE, "unsupported research output kind")
+        for name in ("answer_requirement_ids", "required_answer_semantics"):
+            values = getattr(self, name)
+            if tuple(sorted(set(values))) != values:
+                fail(FailureCode.INVALID_VALUE, f"{name} must be unique and stable-sorted")
+            for value in values:
+                require_identifier(value, name)
+        if isinstance(self.minimum_experiments, bool) or not 0 <= self.minimum_experiments <= 12:
+            fail(FailureCode.INVALID_VALUE, "minimum_experiments must be 0..12")
+        if isinstance(self.max_experiments, bool) or not self.minimum_experiments <= self.max_experiments <= 12:
+            fail(FailureCode.INVALID_VALUE, "max_experiments must be minimum..12")
+        if self.comparison_required and self.minimum_experiments < 2:
+            fail(FailureCode.INVALID_VALUE, "comparison requires at least two experiments")
         if tuple(sorted(self.depends_on)) != self.depends_on or len(set(self.depends_on)) != len(self.depends_on):
             fail(FailureCode.INVALID_VALUE, "depends_on must be unique and stable-sorted")
         for name in self.depends_on:

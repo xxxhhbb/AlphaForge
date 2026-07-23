@@ -135,7 +135,15 @@ class VibeAgentLoopAdapter:
             ]
             data_gaps = _parse_data_gaps(payload.get("data_gaps", ()))
             proxy_specs = _parse_proxy_specs(payload.get("proxy_specs", ()))
-            for source in payload.get("code_drafts", ()):
+            code_drafts = payload.get("code_drafts", ())
+            if not isinstance(code_drafts, (list, tuple)) or len(code_drafts) > task.max_experiments:
+                return _failure(
+                    task, ResearchAgentStatus.FAILED,
+                    ResearchAgentFailureCode.INVALID_MODEL_OUTPUT,
+                    "EXPERIMENT_BUNDLE_SIZE_INVALID",
+                )
+            bundle_incomplete = len(code_drafts) < task.minimum_experiments
+            for source in code_drafts:
                 if not isinstance(source, str):
                     return _failure(task, ResearchAgentStatus.FAILED, ResearchAgentFailureCode.INVALID_MODEL_OUTPUT, "INVALID_CODE_DRAFT")
                 handle = self.draft_store.put_bytes(source.encode("utf-8"), media_type="text/x-python-draft")
@@ -154,6 +162,8 @@ class VibeAgentLoopAdapter:
                         media_type="text/x-python-draft",
                     )
                 )
+            if bundle_incomplete:
+                status = ResearchAgentStatus.PARTIAL
             receipts = toolbox.recorded_receipts
             if not receipts and status is ResearchAgentStatus.COMPLETED:
                 status = ResearchAgentStatus.PARTIAL

@@ -310,7 +310,20 @@ def test_shared_content_addressed_source_runs_review_runner_evidence_and_report(
     assert result.lifecycle == ResearchRunLifecycle.COMPLETED.value
     assert result.experiments[0].status is ProductExperimentStatus.OFFICIAL_EVIDENCE
     assert Path(result.report_path).exists()
-    assert "机器指标" in Path(result.report_path).read_text(encoding="utf-8")
+    report_text = Path(result.report_path).read_text(encoding="utf-8")
+    assert "机器指标" in report_text
+    run_dir = Path(result.report_path).parent
+    for artifact in (
+        "answer_spec.json", "candidate_definitions.json", "evidence_collaboration.json",
+        "research_answer.json", "research_result_bundle.json", "report.json",
+    ):
+        assert (run_dir / artifact).is_file()
+    report_payload = __import__("json").loads((run_dir / "report.json").read_text(encoding="utf-8"))
+    answer_payload = __import__("json").loads((run_dir / "research_answer.json").read_text(encoding="utf-8"))
+    assert report_payload["schema_version"] == "alphaforge.customer-research-report/v3"
+    assert report_payload["research_answer"]["artifact_hash"] == result.answer_hash
+    assert answer_payload["direct_answer"]
+    assert result.answer_hash is not None
     assert result.result_kind is ResearchResultKind.EVALUATED_RESEARCH_RESULT
     assert (tmp_path / "research_runs" / result.run_id / "research_result_bundle.json").is_file()
 
@@ -392,6 +405,81 @@ def test_mechanical_rejection_returns_redacted_codes_for_one_agent_revision(tmp_
         ProductExperimentStatus.OFFICIAL_EVIDENCE,
     ]
     assert result.result_kind is ResearchResultKind.EVALUATED_RESEARCH_RESULT
+
+
+def test_data_driven_formula_review_uses_existing_single_agent_revision(tmp_path):
+    initial_source = (
+        "def run_research(feature_rows, seed):\n"
+        "    feature_fields = ['random_feature', 'turnover_rate']\n"
+        "    z_scores = [1.0, 2.0]\n"
+        "    score = z_scores[0] + z_scores[1]\n"
+        "    return {'rows': []}\n"
+    )
+    revised_source = initial_source.replace(
+        "z_scores[0] + z_scores[1]", "z_scores[0] * z_scores[1]"
+    )
+    store = ContentAddressedHandleStore(tmp_path / "draft_sources")
+    initial_handle = store.put_bytes(initial_source.encode(), media_type="text/x-python-draft")
+    revised_handle = store.put_bytes(revised_source.encode(), media_type="text/x-python-draft")
+    item = task(1)
+
+    class SemanticBinding(Binding):
+        def formula_semantic_arguments(self, *, proposer_id):
+            return {
+                "output_kind": "ScoreTable",
+                "data_snapshot_hash": h("b"),
+                "feature_rows": (
+                    {"decision_time": "2026-01-01", "random_feature": 1, "turnover_rate": 1},
+                    {"decision_time": "2026-01-01", "random_feature": 1, "turnover_rate": 2},
+                    {"decision_time": "2026-01-01", "random_feature": 1, "turnover_rate": 3},
+                    {"decision_time": "2026-01-02", "random_feature": 2, "turnover_rate": 2},
+                    {"decision_time": "2026-01-02", "random_feature": 2, "turnover_rate": 4},
+                    {"decision_time": "2026-01-02", "random_feature": 2, "turnover_rate": 8},
+                ),
+            }
+
+    class SemanticRevisingRuntime(Runtime):
+        supports_review_revision = True
+
+        def __init__(self):
+            super().__init__(initial_handle.handle_id)
+            self.feedback = None
+
+        def run(self, *, task, toolbox, upstream_context, cancellation):
+            self.calls += 1
+            if not upstream_context:
+                return outcome(task, ResearchAgentStatus.COMPLETED, initial_handle.handle_id)
+            self.feedback = dict(upstream_context)
+            return outcome(task, ResearchAgentStatus.COMPLETED, revised_handle.handle_id)
+
+    runtime = SemanticRevisingRuntime()
+    product = AgentResearchProductService(
+        root=tmp_path,
+        scheduler=ResearchSwarmSchedulerAdapter(checkpoint_store=BranchCheckpointStore(tmp_path)),
+        source_repository=ContentAddressedDraftSourceRepository(store),
+        review_gate=ExperimentReviewGate(), runner=Runner(), binding=SemanticBinding(),
+        evidence_evaluator=Evaluator(),
+    )
+    result = product.run(request((item,), {item.specialist_id: runtime}))
+
+    assert runtime.calls == 2
+    assert runtime.feedback["review_feedback_codes"] == "CROSS_SECTION_CONSTANT_ADDITIVE_TERM"
+    assert [entry.status for entry in result.experiments] == [
+        ProductExperimentStatus.NEGATIVE,
+        ProductExperimentStatus.OFFICIAL_EVIDENCE,
+    ]
+    assert result.experiments[0].failure_code == (
+        ProductFailureCode.FORMULA_SEMANTIC_REVIEW_REQUIRED.value
+    )
+    assert result.experiments[0].formula_review_hash is not None
+    assert result.experiments[1].formula_review_hash is not None
+    assert result.experiments[1].revision_of_source_hash == initial_handle.handle_id
+    assert result.experiments[1].revision_reason_codes == (
+        "CROSS_SECTION_CONSTANT_ADDITIVE_TERM",
+    )
+    report_text = Path(result.report_path).read_text(encoding="utf-8")
+    assert "本轮修订" in report_text
+    assert "横截面加法项" in report_text
 
 
 def test_tool_unavailable_branch_becomes_data_gap_report(tmp_path):

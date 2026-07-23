@@ -9,6 +9,7 @@ from veriquant.agent_research_sandbox.report import (
     CustomerResearchReport,
     ResearchProcessNarrative,
     ResearchConclusion,
+    render_persisted_report,
 )
 
 
@@ -61,6 +62,19 @@ def test_customer_report_round_trip_preserves_identity() -> None:
     assert rebuilt.artifact_hash == report.artifact_hash
 
 
+def test_persisted_report_can_be_atomically_rerendered_without_changing_identity(tmp_path) -> None:
+    import json
+
+    report = make_report()
+    source = tmp_path / "report.json"
+    destination = tmp_path / "report.md"
+    source.write_text(json.dumps(report.to_dict(), ensure_ascii=False), encoding="utf-8")
+    assert render_persisted_report(source, destination) == report.artifact_hash
+    first = destination.read_text(encoding="utf-8")
+    assert render_persisted_report(source, destination) == report.artifact_hash
+    assert destination.read_text(encoding="utf-8") == first
+
+
 def test_customer_report_explains_the_actual_research_process() -> None:
     report = make_report(
         research_process=(ResearchProcessNarrative(
@@ -81,6 +95,49 @@ def test_customer_report_explains_the_actual_research_process() -> None:
     assert "调查了什么" in markdown
     assert "实际尝试" in markdown
     assert "审查与修订" in markdown
+
+
+def test_score_report_answers_question_and_hides_internal_experiment_ids() -> None:
+    experiment = "task_alternative_data_abc123"
+    report = make_report(
+        question="寻找资金流与流动性 Alpha，比较成本、Shibor 状态和相对已有动量的增量性。",
+        question_hash=canonical_hash({"question": "寻找资金流与流动性 Alpha，比较成本、Shibor 状态和相对已有动量的增量性。"}),
+        conclusion=ResearchConclusion.REVISE,
+        metrics=(
+            BoundMetric(f"{experiment} · IC 均值", "0.032", HASH),
+            BoundMetric(f"{experiment} · RankIC", "0.195", HASH),
+            BoundMetric(f"{experiment} · Pearson IC", "0.150", HASH),
+            BoundMetric(f"{experiment} · ICIR", "5.25", HASH),
+            BoundMetric(f"{experiment} · 成本前收益", "0.0024", HASH),
+            BoundMetric(f"{experiment} · 成本后收益", "0.0016", HASH),
+            BoundMetric(f"{experiment} · 换手率", "0.33", HASH),
+            BoundMetric(f"{experiment} · 最弱子时期 IC", "-0.007", HASH),
+            BoundMetric(f"{experiment} · 子时期正向比例", "0.5", HASH),
+            BoundMetric(f"{experiment} · 增量 IC 均值", "0.032", HASH),
+            BoundMetric(f"{experiment} · 与已登记因子最高相关性", "0", HASH),
+            BoundMetric("辅助研究 · task_macro_1 · sign_stability.mean return", "0", HASH),
+        ),
+        research_process=(ResearchProcessNarrative(
+            specialist="另类数据研究组",
+            status="COMPLETED",
+            plan="使用冻结资金流与流动性数据构建横截面评分。",
+            investigations=("检查资金流字段覆盖率。",),
+            attempts=(f"提交实验 {experiment}：OFFICIAL_EVIDENCE，评价为 VALIDATED_RESEARCH。",),
+            review_findings=(f"{experiment}：机械审查通过。",),
+            evidence_summary=(f"{experiment} 形成正式 Evidence。",),
+            artifact_hashes=(HASH,),
+        ),),
+        limitations=(f"RUNNER_BLOCKED:{experiment}",),
+    )
+    markdown = ChineseResearchReportComposer().render(report)
+    assert "候选评分较高的股票随后收益整体更高" in markdown
+    assert "扣除成本后" in markdown
+    assert "时间稳定性尚未完全成立" in markdown
+    assert "低相关性结论仍需核实" in markdown
+    assert "高低 Shibor 状态下的效果没有保持稳定" in markdown
+    assert "| 本轮实际答案 | 关键依据 | 判断 |" in markdown
+    assert experiment not in markdown
+    assert "task_" not in markdown
 
 
 def test_machine_conclusion_cannot_exist_without_bound_metric() -> None:
@@ -106,3 +163,13 @@ def test_external_approval_report_is_complete_without_fake_metrics() -> None:
 def test_report_redacts_privileged_or_secret_material(text: str) -> None:
     with pytest.raises(ValueError, match="privileged or secret"):
         make_report(limitations=(text,))
+
+
+def test_report_allows_legitimate_order_flow_research_fields() -> None:
+    report = make_report(
+        research_routes=(
+            "使用 large_order_imbalance 与 net_moneyflow_amount 研究大单交易结构。",
+        ),
+    )
+    markdown = ChineseResearchReportComposer().render(report)
+    assert "large_order_imbalance" in markdown

@@ -10,9 +10,11 @@ import pytest
 from veriquant.agent_research_product.canary import (
     AgentResearchProductCanary,
     ProductCanaryConfiguration,
+    _load_amendment,
     _prepare_data,
 )
 from veriquant.agent_research_sandbox import (
+    ExperimentReviewPolicy,
     RegressionRow,
     RegressionTable,
     RegimeComparisonRow,
@@ -37,6 +39,27 @@ from veriquant.research_agent_runtime import (
 )
 from veriquant.research_validation_pipeline_v2.models import FrozenRowProvenance, FrozenValidationData
 from veriquant.research_data_gateway.dynamic_tool_freeze import AUTHORITY_FILE
+
+
+def test_amendment_receipt_resolution_is_independent_of_process_cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    amendment = _load_amendment(ExperimentReviewPolicy())
+    assert amendment.amendment_id == "A-02"
+
+
+def test_product_runner_budget_accepts_full_vintage_but_remains_bounded(tmp_path):
+    frozen_repository(tmp_path / "data")
+    config = ProductCanaryConfiguration(
+        data_root=tmp_path / "data",
+        artifact_root=tmp_path / "artifacts",
+        question="研究完整冻结样本",
+        docker_image="alphaforge/research-sandbox:local",
+        docker_image_id=IMAGE_ID,
+    )
+    assert config.runner_max_input_bytes == 256 * 1024 * 1024
+    assert config.runner_max_output_bytes == 64 * 1024 * 1024
+    with pytest.raises(ValueError, match="runner_max_input_bytes"):
+        replace(config, runner_max_input_bytes=257 * 1024 * 1024)
 
 
 UTC = timezone.utc

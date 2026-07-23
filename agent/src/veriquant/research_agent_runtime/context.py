@@ -75,7 +75,10 @@ class VeriQuantResearchContextBuilder:
             ],
             "prohibited_capabilities": self.policy.prohibited_capabilities,
             "required_output": {
-                "plan": "string",
+                "plan": (
+                    "customer-facing candidate definition with exact fields, transformations, direction, "
+                    "observation window, forecast horizon, normalization, rationale, and proxy limitations"
+                ),
                 "investigations": "array of tool receipt objects",
                 "data_gaps": (
                     "array of {concept,reason_code,requested_fields,attempted_tools,detail}; "
@@ -86,11 +89,16 @@ class VeriQuantResearchContextBuilder:
                     "a proxy must be disclosed and remains DRAFT"
                 ),
                 "code_drafts": (
-                    "array of 1 to 3 complete inert source strings; prefer compact programs under "
+                    f"array of {task.minimum_experiments} to {task.max_experiments} complete inert source strings; prefer compact programs under "
                     "200 lines each so the provider can finish the JSON response"
                 ),
                 "status": "COMPLETED or PARTIAL",
                 "authority": "DRAFT_ONLY",
+            },
+            "answer_requirements": {
+                "requirement_ids": task.answer_requirement_ids,
+                "required_semantics": task.required_answer_semantics,
+                "comparison_required": task.comparison_required,
             },
         }
         require_text(task.question, "question")
