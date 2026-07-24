@@ -9,7 +9,7 @@ describe("AlphaForge 正式报告详情页", () => {
       detail: {
         run: { run_id: "run-report-test", title: "50 日动量研究" },
         report: {
-          markdown: "# 50 日动量研究\n\n机器结论：需要修订。",
+          markdown: "# 50 日动量研究\n\n机器结论：需要修订。\n\n| 指标 | 结论 |\n| --- | --- |\n| Evidence | 辅助研究 |",
           report_hash: `sha256:${"a".repeat(64)}`,
         },
       },
@@ -29,6 +29,7 @@ describe("AlphaForge 正式报告详情页", () => {
 
     expect(await screen.findByRole("heading", { name: "50 日动量研究" })).toBeInTheDocument();
     expect(screen.getByText("机器结论：需要修订。")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /查看完整证据链/ })).toHaveAttribute(
       "href",
       "/veriquant/workbench?run_id=run-report-test",

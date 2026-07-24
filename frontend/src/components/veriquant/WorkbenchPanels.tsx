@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { WorkbenchRunDetail, WorkbenchRunSummary, WorkbenchStatus } from "./WorkbenchTypes";
 import { STATUS_LABELS, WORKBENCH_STATUSES } from "./WorkbenchTypes";
 import { asArray, asRecord, valueText } from "@/lib/veriquant";
@@ -123,7 +124,7 @@ export function FormalResearchReport({ detail }: { detail: WorkbenchRunDetail })
       {markdown ? (
         <>
           <div className="vq-formal-report">
-            <ReactMarkdown>{markdown}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
           </div>
           <p className="vq-caption vq-top-gap">
             报告标识：<code>{valueText(report.report_hash)}</code>

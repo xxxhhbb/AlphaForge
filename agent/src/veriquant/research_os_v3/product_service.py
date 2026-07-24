@@ -18,6 +18,7 @@ from ..contracts import Component, FailureCode
 from ..contracts.base import fail
 from ..data import canonical_content_hash
 from ..data_capability import DataRequirementPlanner, DatasetCapabilityAssessor
+from ..data_capability.models import CapabilityStatus, DataGapCode, DatasetCapabilityReport, SCHEMA_VERSION
 from ..dynamic_data_planning import (
     DataPlanningRequest,
     DynamicDataRequirementCompiler,
@@ -813,7 +814,32 @@ def _should_start_recovery_retry(manifest: ResearchRunManifest) -> bool:
 def _data_assessment(intent, data: FrozenValidationData | None):
     dynamic_plan, requirement = _compile_data_requirements(intent, data)
     if data is None:
-        fail(FailureCode.MISSING_REQUIRED_FIELD, "frozen research data is unavailable")
+        capability = DatasetCapabilityReport(
+            schema_version=SCHEMA_VERSION,
+            requirement_plan_hash=requirement.artifact_hash,
+            source_label=APPROVED_SOURCE_LABEL,
+            snapshot_hash="sha256:" + "0" * 64,
+            observed_start=None,
+            observed_end=None,
+            observed_sessions=0,
+            observed_symbols=0,
+            minimum_cross_section_observed=0,
+            median_cross_section_observed=0.0,
+            maximum_cross_section_observed=0,
+            field_proofs=(),
+            available_at_verified=False,
+            revision_semantics_verified=False,
+            source_provenance_verified=False,
+            historical_universe_verified=False,
+            label_rows=0,
+            label_coverage=0.0,
+            status=CapabilityStatus.UNAVAILABLE,
+            gap_codes=(
+                DataGapCode.FREEZE_MANIFEST_MISSING,
+                DataGapCode.SNAPSHOT_NOT_FROZEN,
+            ),
+        )
+        return dynamic_plan, requirement, capability
     capability = DatasetCapabilityAssessor().assess(
         requirement=requirement,
         frozen_data=data,

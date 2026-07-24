@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Circle, FileText, Loader2, Search, ShieldCheck, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   defaultResearchOSV3LaunchClient,
   type V3CampaignPlanView,
@@ -13,7 +15,7 @@ import "@/features/research-os-v3-launch/research-os-v3-launch.css";
 const TERMINAL_STATES = new Set(["已完成", "部分完成", "已阻断", "失败", "已取消"]);
 const REPORTABLE_TERMINAL_STATES = new Set(["已完成", "部分完成", "已阻断", "失败"]);
 
-type UiStatus = "idle" | "planning" | "running" | "publishing" | "done" | "failed";
+type UiStatus = "idle" | "planning" | "reviewing" | "confirming" | "running" | "publishing" | "done" | "failed";
 
 interface StepView {
   id: string;
@@ -48,10 +50,12 @@ export function ResearchOSV3LaunchPage({
   const abortRef = useRef<AbortController | null>(null);
   const startedRef = useRef(false);
 
-  const busy = status === "planning" || status === "running" || status === "publishing";
+  const busy = status === "planning" || status === "confirming" || status === "running" || status === "publishing";
   const phase = useMemo(() => {
     if (status === "idle") return "等待研究问题";
     if (status === "planning") return "正在理解问题并制定研究路线";
+    if (status === "reviewing") return "等待用户审阅并显式确认研究计划";
+    if (status === "confirming") return "正在确认计划并启动受控研究";
     if (status === "running") return run?.currentStage ?? "专业研究小组正在工作";
     if (status === "publishing") return "正在汇总机器证据并生成报告";
     if (status === "done") return "研究报告已完成";
@@ -83,8 +87,30 @@ export function ResearchOSV3LaunchPage({
         setError(`当前数据不足以自动研究：${draft.dataScope.limitations.join("；") || "缺少可评价数据"}`);
         return;
       }
-      setNotice("已形成研究路线，系统自动确认并启动受控研究。");
-      const confirmed = await client.confirmPlan(draft.campaignId);
+      setStatus("reviewing");
+      setNotice("研究计划已生成。请先审阅数据范围、研究组、预算、检查点和停止条件，再显式确认启动。");
+    } catch (reason) {
+      if (reason instanceof DOMException && reason.name === "AbortError") return;
+      setStatus("failed");
+      setError(reason instanceof Error ? reason.message : "研究服务暂时不可用。");
+    } finally {
+      startedRef.current = false;
+    }
+  };
+
+  const confirmAndStartResearch = async () => {
+    if (!plan || busy || startedRef.current) return;
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    startedRef.current = true;
+    setRun(undefined);
+    setReport("");
+    setError("");
+    setAttempts(0);
+    setStatus("confirming");
+    setNotice("正在提交用户确认，并启动受控研究。");
+    try {
+      const confirmed = await client.confirmPlan(plan.campaignId);
       setPlan(confirmed);
       const started = await client.startRun(confirmed.campaignId);
       setRun(started);
@@ -187,13 +213,22 @@ export function ResearchOSV3LaunchPage({
           </select>
           <button className="primary-action" disabled={busy || !question.trim()} onClick={startResearch} type="button">
             {busy ? <Loader2 className="spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
-            {busy ? "研究进行中" : "开始研究并生成报告"}
+            {busy ? "处理中" : "生成研究计划"}
           </button>
-          {(run || report || error) ? <button className="ghost-action" disabled={busy} onClick={reset} type="button">重新开始</button> : null}
+          {(plan || run || report || error) ? <button className="ghost-action" disabled={busy} onClick={reset} type="button">返回修改</button> : null}
         </div>
         {notice ? <p className="terminal-notice" role="status">{notice}</p> : null}
         {error ? <p className="terminal-error" role="alert">{error}</p> : null}
       </section>
+
+      {plan && !run && !report ? (
+        <PlanReview
+          busy={busy}
+          onConfirm={confirmAndStartResearch}
+          plan={plan}
+          showConfirm={status === "reviewing"}
+        />
+      ) : null}
 
       <section className="terminal-grid">
         <ProcessTimeline steps={steps} />
@@ -203,6 +238,69 @@ export function ResearchOSV3LaunchPage({
       {run ? <SpecialistBoard run={run} /> : null}
       {report ? <ReportPanel markdown={report} /> : null}
     </main>
+  );
+}
+
+function PlanReview({ busy, onConfirm, plan, showConfirm }: { busy: boolean; onConfirm: () => void; plan: V3CampaignPlanView; showConfirm: boolean }) {
+  return (
+    <section className="research-terminal-card plan-review-card" aria-labelledby="plan-review-title">
+      <header className="section-title">
+        <ShieldCheck aria-hidden="true" />
+        <div>
+          <h2 id="plan-review-title">研究计划审阅</h2>
+          <p>确认前请检查研究目标、数据范围、预算、检查点和停止条件。系统不会自动替你确认。</p>
+        </div>
+      </header>
+      <div className="plan-review-grid">
+        <article>
+          <span>原始问题</span>
+          <p>{plan.question}</p>
+        </article>
+        <article>
+          <span>研究目标</span>
+          <p>{plan.researchSubject}</p>
+        </article>
+        <article>
+          <span>研究模式</span>
+          <p>{plan.researchMode} · {plan.depth} · {plan.interactionStyle}</p>
+        </article>
+        <article>
+          <span>数据范围</span>
+          <p>{plan.dataScope.sourceLabel}，{plan.dataScope.universe}，{plan.dataScope.dateRange}</p>
+          {plan.dataScope.limitations.length ? <small>{plan.dataScope.limitations.join("；")}</small> : <small>当前未报告数据限制。</small>}
+        </article>
+        <article>
+          <span>预算</span>
+          <p>{plan.budget.specialistGroups} 个研究组，最多 {plan.budget.candidateLimit} 个候选，{plan.budget.trialLimit} 次机器试验，{plan.budget.modelCallLimit} 次模型调用。</p>
+        </article>
+      </div>
+      <div className="plan-review-lists">
+        <div>
+          <h3>选中的专业研究组</h3>
+          <ul>{plan.selectedSpecialists.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+        <div>
+          <h3>研究步骤</h3>
+          <ul>{plan.plannedResearch.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+        <div>
+          <h3>检查点</h3>
+          <ul>{plan.checkpoints.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+        <div>
+          <h3>停止条件</h3>
+          <ul>{plan.stopConditions.map((item) => <li key={item}>{item}</li>)}</ul>
+        </div>
+      </div>
+      {showConfirm ? (
+        <div className="plan-review-actions">
+          <button className="primary-action" disabled={busy} onClick={onConfirm} type="button">
+            {busy ? <Loader2 className="spin" aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />}
+            确认并开始研究
+          </button>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -300,7 +398,7 @@ function ReportPanel({ markdown }: { markdown: string }) {
         ) : null}
         <details className="technical-appendix">
           <summary>展开完整机器报告与审计附录</summary>
-          <div className="report-reader">{renderMarkdown(markdown)}</div>
+          <div className="report-reader"><ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown></div>
         </details>
       </div>
     </section>
@@ -323,18 +421,6 @@ function buildSteps(status: UiStatus, plan?: V3CampaignPlanView, run?: V3Researc
     { id: "evidence", title: "机器证据评价", description: "PIT、成本后表现、稳定性、增量性", state: hasTrials ? "已完成" : hasCandidates ? "运行中" : "等待中" },
     { id: "report", title: "生成正式报告", description: "把机器事实翻译成中文研究结论", state: hasReport ? "已完成" : run && TERMINAL_STATES.has(run.state) ? "运行中" : "等待中" },
   ];
-}
-
-function renderMarkdown(markdown: string) {
-  return markdown.split(/\r?\n/).map((line, index) => {
-    const key = `${index}-${line.slice(0, 12)}`;
-    if (line.startsWith("# ")) return <h1 key={key}>{line.slice(2)}</h1>;
-    if (line.startsWith("## ")) return <h2 key={key}>{line.slice(3)}</h2>;
-    if (line.startsWith("### ")) return <h3 key={key}>{line.slice(4)}</h3>;
-    if (line.startsWith("- ")) return <p className="report-bullet" key={key}>• {formatInline(line.slice(2))}</p>;
-    if (!line.trim()) return <div className="report-gap" key={key} />;
-    return <p key={key}>{formatInline(line)}</p>;
-  });
 }
 
 interface ParsedReport {
@@ -418,15 +504,6 @@ function pickMetric(lines: string[], key: string, label = key): { label: string;
   const found = pickFact(lines, key);
   if (!found) return undefined;
   return { label, value: found.value };
-}
-
-function formatInline(text: string) {
-  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).filter(Boolean);
-  return parts.map((part, index) => {
-    if (part.startsWith("`") && part.endsWith("`")) return <code key={index}>{part.slice(1, -1)}</code>;
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    return <span key={index}>{part}</span>;
-  });
 }
 
 function delay(ms: number) {
